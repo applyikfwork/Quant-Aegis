@@ -1,15 +1,18 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.SUPABASE_URL ?? "https://placeholder.supabase.co";
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "placeholder-key";
+const supabaseUrl = process.env.SUPABASE_URL ?? "";
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
 
-if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+export const isOfflineMode = !supabaseUrl || !supabaseKey;
+
+if (isOfflineMode) {
   console.warn("[supabase] SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not set — running in offline mode. Database calls will return empty data.");
 }
 
-export const supabase = createClient(supabaseUrl, supabaseKey, {
-  auth: { persistSession: false },
-});
+// Only create the client when real credentials are present
+export const supabase = isOfflineMode
+  ? null as unknown as ReturnType<typeof createClient>
+  : createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false } });
 
 export async function setupTables(): Promise<void> {
   const sql = `
