@@ -4,6 +4,7 @@ import {
   useCreateSignal,
   getListSignalsQueryKey
 } from "@workspace/api-client-react";
+import { useRealtimeTable } from "@/hooks/useRealtimeTable";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +13,8 @@ import { formatDate } from "@/lib/format";
 import { Signal as SignalIcon, ArrowUpRight, ArrowDownRight, Minus } from "lucide-react";
 
 export default function Signals() {
+  useRealtimeTable("signals", [getListSignalsQueryKey({ limit: 50 })]);
+
   const { data: signals, isLoading } = useListSignals(
     { limit: 50 },
     { query: { queryKey: getListSignalsQueryKey({ limit: 50 }), refetchInterval: 10000 } }

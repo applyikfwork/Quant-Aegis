@@ -6,6 +6,7 @@ import {
   useGetDailyPerformance
 } from "@workspace/api-client-react";
 import { getGetDashboardSummaryQueryKey, getGetMarketPricesQueryKey, getListSignalsQueryKey, getListTradesQueryKey, getGetDailyPerformanceQueryKey } from "@workspace/api-client-react";
+import { useRealtimeMultiple } from "@/hooks/useRealtimeTable";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency, formatPercent, cnValueColor, formatNumber } from "@/lib/format";
@@ -29,6 +30,12 @@ import {
 } from "recharts";
 
 export default function Dashboard() {
+  useRealtimeMultiple([
+    { table: "trades", queryKeys: [getListTradesQueryKey({ status: "open", limit: 5 }), getGetDashboardSummaryQueryKey()] },
+    { table: "signals", queryKeys: [getListSignalsQueryKey({ limit: 5 })] },
+    { table: "activity_events", queryKeys: [getGetDashboardSummaryQueryKey()] },
+  ]);
+
   const { data: summary, isLoading: loadingSummary } = useGetDashboardSummary({
     query: {
       queryKey: getGetDashboardSummaryQueryKey()

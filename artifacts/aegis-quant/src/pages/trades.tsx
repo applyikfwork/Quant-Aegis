@@ -13,10 +13,13 @@ import { formatCurrency, formatPercent, formatNumber, cnValueColor, formatDate }
 import { BarChart2, Plus, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { useRealtimeTable } from "@/hooks/useRealtimeTable";
 
 export default function Trades() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  useRealtimeTable("trades", [getListTradesQueryKey()]);
   
   const { data: trades, isLoading } = useListTrades({
     query: { queryKey: getListTradesQueryKey() }

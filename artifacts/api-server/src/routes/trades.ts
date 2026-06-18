@@ -1,273 +1,168 @@
 import { Router, type IRouter } from "express";
-import { db } from "@workspace/db";
-import { tradesTable, tradeReasonsTable, strategiesTable, activityEventsTable } from "@workspace/db";
+import { supabase } from "../lib/supabase";
 import {
   CreateTradeBody,
   UpdateTradeBody,
   GetTradeParams,
   UpdateTradeParams,
-  UpdateTradeResponse,
-  GetTradeResponse,
   DeleteTradeParams,
   GetTradeReasonsParams,
   ListTradesQueryParams,
-  ListTradesResponse,
-  GetTradeReasonsResponse,
 } from "@workspace/api-zod";
-import { eq, desc, and } from "drizzle-orm";
 
 const router: IRouter = Router();
 
 router.get("/trades", async (req, res): Promise<void> => {
   const query = ListTradesQueryParams.safeParse(req.query);
-  if (!query.success) {
-    res.status(400).json({ error: query.error.message });
-    return;
-  }
+  if (!query.success) { res.status(400).json({ error: query.error.message }); return; }
 
-  const conditions = [];
-  if (query.data.status) conditions.push(eq(tradesTable.status, query.data.status));
-  if (query.data.symbol) conditions.push(eq(tradesTable.symbol, query.data.symbol));
-
-  const trades = await db
-    .select({
-      id: tradesTable.id,
-      symbol: tradesTable.symbol,
-      strategyId: tradesTable.strategyId,
-      side: tradesTable.side,
-      entryPrice: tradesTable.entryPrice,
-      exitPrice: tradesTable.exitPrice,
-      quantity: tradesTable.quantity,
-      stopLoss: tradesTable.stopLoss,
-      takeProfit: tradesTable.takeProfit,
-      profitLoss: tradesTable.profitLoss,
-      profitPercent: tradesTable.profitPercent,
-      status: tradesTable.status,
-      aiConfidence: tradesTable.aiConfidence,
-      timeframe: tradesTable.timeframe,
-      entryTime: tradesTable.entryTime,
-      exitTime: tradesTable.exitTime,
-      createdAt: tradesTable.createdAt,
-      strategyName: strategiesTable.name,
-    })
-    .from(tradesTable)
-    .leftJoin(strategiesTable, eq(tradesTable.strategyId, strategiesTable.id))
-    .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .orderBy(desc(tradesTable.createdAt))
+  let q = supabase
+    .from("trades")
+    .select("*, strategies(name)")
+    .order("created_at", { ascending: false })
     .limit(query.data.limit ?? 50);
 
-  res.json(
-    ListTradesResponse.parse(
-      trades.map((t) => ({
-        ...t,
-        entryTime: t.entryTime.toISOString(),
-        exitTime: t.exitTime ? t.exitTime.toISOString() : null,
-        createdAt: t.createdAt.toISOString(),
-        strategyName: t.strategyName ?? null,
-      }))
-    )
-  );
+  if (query.data.status) q = q.eq("status", query.data.status);
+  if (query.data.symbol) q = q.eq("symbol", query.data.symbol);
+
+  const { data, error } = await q;
+  if (error) { res.status(500).json({ error: error.message }); return; }
+
+  res.json((data ?? []).map(t => ({
+    id: t.id, symbol: t.symbol, strategyId: t.strategy_id, side: t.side,
+    entryPrice: t.entry_price, exitPrice: t.exit_price, quantity: t.quantity,
+    stopLoss: t.stop_loss, takeProfit: t.take_profit, profitLoss: t.profit_loss,
+    profitPercent: t.profit_percent, status: t.status, aiConfidence: t.ai_confidence,
+    timeframe: t.timeframe, entryTime: t.entry_time, exitTime: t.exit_time,
+    createdAt: t.created_at, strategyName: (t.strategies as any)?.name ?? null,
+  })));
 });
 
 router.post("/trades", async (req, res): Promise<void> => {
   const parsed = CreateTradeBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
-    return;
-  }
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
-  const [trade] = await db
-    .insert(tradesTable)
-    .values({
-      symbol: parsed.data.symbol,
-      strategyId: parsed.data.strategyId ?? null,
-      side: parsed.data.side,
-      entryPrice: parsed.data.entryPrice,
-      quantity: parsed.data.quantity,
-      stopLoss: parsed.data.stopLoss ?? null,
-      takeProfit: parsed.data.takeProfit ?? null,
-      aiConfidence: parsed.data.aiConfidence ?? null,
-      timeframe: parsed.data.timeframe ?? null,
-    })
-    .returning();
+  const { data: trade, error } = await supabase.from("trades").insert({
+    symbol: parsed.data.symbol, strategy_id: parsed.data.strategyId ?? null,
+    side: parsed.data.side, entry_price: parsed.data.entryPrice,
+    quantity: parsed.data.quantity, stop_loss: parsed.data.stopLoss ?? null,
+    take_profit: parsed.data.takeProfit ?? null, ai_confidence: parsed.data.aiConfidence ?? null,
+    timeframe: parsed.data.timeframe ?? null,
+  }).select().single();
 
-  // Insert reasons if provided
-  const reasons = (parsed.data as { reasons?: Array<{ reasonType: string; reasonText: string }> }).reasons;
-  if (reasons && reasons.length > 0) {
-    await db.insert(tradeReasonsTable).values(
-      reasons.map((r) => ({ tradeId: trade.id, reasonType: r.reasonType, reasonText: r.reasonText }))
+  if (error) { res.status(500).json({ error: error.message }); return; }
+
+  const reasons = (parsed.data as any).reasons as Array<{ reasonType: string; reasonText: string }> | undefined;
+  if (reasons?.length) {
+    await supabase.from("trade_reasons").insert(
+      reasons.map(r => ({ trade_id: trade.id, reason_type: r.reasonType, reason_text: r.reasonText }))
     );
   }
 
-  await db.insert(activityEventsTable).values({
+  await supabase.from("activity_events").insert({
     type: "trade_opened",
     title: `Trade opened: ${parsed.data.side.toUpperCase()} ${parsed.data.symbol}`,
     description: `${parsed.data.side.toUpperCase()} position opened on ${parsed.data.symbol} at $${parsed.data.entryPrice}`,
-    symbol: parsed.data.symbol,
-    value: parsed.data.entryPrice,
+    symbol: parsed.data.symbol, value: parsed.data.entryPrice,
   });
 
   let strategyName: string | null = null;
-  if (trade.strategyId) {
-    const [strat] = await db.select({ name: strategiesTable.name }).from(strategiesTable).where(eq(strategiesTable.id, trade.strategyId));
+  if (trade.strategy_id) {
+    const { data: strat } = await supabase.from("strategies").select("name").eq("id", trade.strategy_id).single();
     strategyName = strat?.name ?? null;
   }
 
-  res.status(201).json(
-    GetTradeResponse.parse({
-      ...trade,
-      entryTime: trade.entryTime.toISOString(),
-      exitTime: null,
-      createdAt: trade.createdAt.toISOString(),
-      strategyName,
-    })
-  );
+  res.status(201).json({
+    id: trade.id, symbol: trade.symbol, strategyId: trade.strategy_id, side: trade.side,
+    entryPrice: trade.entry_price, exitPrice: trade.exit_price, quantity: trade.quantity,
+    stopLoss: trade.stop_loss, takeProfit: trade.take_profit, profitLoss: trade.profit_loss,
+    profitPercent: trade.profit_percent, status: trade.status, aiConfidence: trade.ai_confidence,
+    timeframe: trade.timeframe, entryTime: trade.entry_time, exitTime: null,
+    createdAt: trade.created_at, strategyName,
+  });
 });
 
 router.get("/trades/:id", async (req, res): Promise<void> => {
   const params = GetTradeParams.safeParse(req.params);
-  if (!params.success) {
-    res.status(400).json({ error: params.error.message });
-    return;
-  }
+  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
 
-  const [trade] = await db
-    .select({
-      id: tradesTable.id,
-      symbol: tradesTable.symbol,
-      strategyId: tradesTable.strategyId,
-      side: tradesTable.side,
-      entryPrice: tradesTable.entryPrice,
-      exitPrice: tradesTable.exitPrice,
-      quantity: tradesTable.quantity,
-      stopLoss: tradesTable.stopLoss,
-      takeProfit: tradesTable.takeProfit,
-      profitLoss: tradesTable.profitLoss,
-      profitPercent: tradesTable.profitPercent,
-      status: tradesTable.status,
-      aiConfidence: tradesTable.aiConfidence,
-      timeframe: tradesTable.timeframe,
-      entryTime: tradesTable.entryTime,
-      exitTime: tradesTable.exitTime,
-      createdAt: tradesTable.createdAt,
-      strategyName: strategiesTable.name,
-    })
-    .from(tradesTable)
-    .leftJoin(strategiesTable, eq(tradesTable.strategyId, strategiesTable.id))
-    .where(eq(tradesTable.id, params.data.id));
+  const { data: trade, error } = await supabase
+    .from("trades").select("*, strategies(name)").eq("id", params.data.id).single();
+  if (error || !trade) { res.status(404).json({ error: "Trade not found" }); return; }
 
-  if (!trade) {
-    res.status(404).json({ error: "Trade not found" });
-    return;
-  }
-
-  res.json(
-    GetTradeResponse.parse({
-      ...trade,
-      entryTime: trade.entryTime.toISOString(),
-      exitTime: trade.exitTime ? trade.exitTime.toISOString() : null,
-      createdAt: trade.createdAt.toISOString(),
-      strategyName: trade.strategyName ?? null,
-    })
-  );
+  res.json({
+    id: trade.id, symbol: trade.symbol, strategyId: trade.strategy_id, side: trade.side,
+    entryPrice: trade.entry_price, exitPrice: trade.exit_price, quantity: trade.quantity,
+    stopLoss: trade.stop_loss, takeProfit: trade.take_profit, profitLoss: trade.profit_loss,
+    profitPercent: trade.profit_percent, status: trade.status, aiConfidence: trade.ai_confidence,
+    timeframe: trade.timeframe, entryTime: trade.entry_time, exitTime: trade.exit_time,
+    createdAt: trade.created_at, strategyName: (trade.strategies as any)?.name ?? null,
+  });
 });
 
 router.patch("/trades/:id", async (req, res): Promise<void> => {
   const params = UpdateTradeParams.safeParse(req.params);
-  if (!params.success) {
-    res.status(400).json({ error: params.error.message });
-    return;
-  }
-
+  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
   const parsed = UpdateTradeBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
-    return;
-  }
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
-  // Get current trade to compute P&L if closing
-  const [currentTrade] = await db.select().from(tradesTable).where(eq(tradesTable.id, params.data.id));
-  if (!currentTrade) {
-    res.status(404).json({ error: "Trade not found" });
-    return;
-  }
+  const { data: current, error: fetchErr } = await supabase.from("trades").select("*").eq("id", params.data.id).single();
+  if (fetchErr || !current) { res.status(404).json({ error: "Trade not found" }); return; }
 
-  const updates: Partial<typeof currentTrade> = {};
-  if (parsed.data.exitPrice !== undefined) updates.exitPrice = parsed.data.exitPrice;
-  if (parsed.data.stopLoss !== undefined) updates.stopLoss = parsed.data.stopLoss;
-  if (parsed.data.takeProfit !== undefined) updates.takeProfit = parsed.data.takeProfit;
+  const updates: Record<string, unknown> = {};
+  if (parsed.data.exitPrice !== undefined) updates.exit_price = parsed.data.exitPrice;
+  if (parsed.data.stopLoss !== undefined) updates.stop_loss = parsed.data.stopLoss;
+  if (parsed.data.takeProfit !== undefined) updates.take_profit = parsed.data.takeProfit;
   if (parsed.data.status !== undefined) updates.status = parsed.data.status;
-  if (parsed.data.exitTime !== undefined) updates.exitTime = new Date(parsed.data.exitTime);
+  if (parsed.data.exitTime !== undefined) updates.exit_time = parsed.data.exitTime;
 
-  // Compute P&L when closing
   if (parsed.data.exitPrice !== undefined && parsed.data.status === "closed") {
     const exitPrice = parsed.data.exitPrice;
-    const entryPrice = currentTrade.entryPrice;
-    const quantity = currentTrade.quantity;
-    const pnl =
-      currentTrade.side === "long"
-        ? (exitPrice - entryPrice) * quantity
-        : (entryPrice - exitPrice) * quantity;
-    const pnlPct =
-      currentTrade.side === "long"
-        ? ((exitPrice - entryPrice) / entryPrice) * 100
-        : ((entryPrice - exitPrice) / entryPrice) * 100;
+    const pnl = current.side === "long"
+      ? (exitPrice - current.entry_price) * current.quantity
+      : (current.entry_price - exitPrice) * current.quantity;
+    const pnlPct = current.side === "long"
+      ? ((exitPrice - current.entry_price) / current.entry_price) * 100
+      : ((current.entry_price - exitPrice) / current.entry_price) * 100;
+    updates.profit_loss = pnl;
+    updates.profit_percent = pnlPct;
+    if (!updates.exit_time) updates.exit_time = new Date().toISOString();
 
-    updates.profitLoss = pnl;
-    updates.profitPercent = pnlPct;
-    if (!updates.exitTime) updates.exitTime = new Date();
-
-    await db.insert(activityEventsTable).values({
+    await supabase.from("activity_events").insert({
       type: "trade_closed",
-      title: `Trade closed: ${currentTrade.symbol}`,
-      description: `${currentTrade.side.toUpperCase()} position on ${currentTrade.symbol} closed at $${exitPrice} | PnL: ${pnl >= 0 ? "+" : ""}$${pnl.toFixed(2)}`,
-      symbol: currentTrade.symbol,
-      value: pnl,
+      title: `Trade closed: ${current.symbol}`,
+      description: `${current.side.toUpperCase()} on ${current.symbol} closed at $${exitPrice} | PnL: ${pnl >= 0 ? "+" : ""}$${pnl.toFixed(2)}`,
+      symbol: current.symbol, value: pnl,
     });
   }
 
-  const [trade] = await db
-    .update(tradesTable)
-    .set(updates)
-    .where(eq(tradesTable.id, params.data.id))
-    .returning();
+  const { data: trade, error } = await supabase.from("trades").update(updates).eq("id", params.data.id).select().single();
+  if (error) { res.status(500).json({ error: error.message }); return; }
 
-  res.json(
-    UpdateTradeResponse.parse({
-      ...trade,
-      entryTime: trade.entryTime.toISOString(),
-      exitTime: trade.exitTime ? trade.exitTime.toISOString() : null,
-      createdAt: trade.createdAt.toISOString(),
-      strategyName: null,
-    })
-  );
+  res.json({
+    id: trade.id, symbol: trade.symbol, strategyId: trade.strategy_id, side: trade.side,
+    entryPrice: trade.entry_price, exitPrice: trade.exit_price, quantity: trade.quantity,
+    stopLoss: trade.stop_loss, takeProfit: trade.take_profit, profitLoss: trade.profit_loss,
+    profitPercent: trade.profit_percent, status: trade.status, aiConfidence: trade.ai_confidence,
+    timeframe: trade.timeframe, entryTime: trade.entry_time, exitTime: trade.exit_time,
+    createdAt: trade.created_at, strategyName: null,
+  });
 });
 
 router.delete("/trades/:id", async (req, res): Promise<void> => {
   const params = DeleteTradeParams.safeParse(req.params);
-  if (!params.success) {
-    res.status(400).json({ error: params.error.message });
-    return;
-  }
-
-  await db.delete(tradeReasonsTable).where(eq(tradeReasonsTable.tradeId, params.data.id));
-  await db.delete(tradesTable).where(eq(tradesTable.id, params.data.id));
+  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+  await supabase.from("trade_reasons").delete().eq("trade_id", params.data.id);
+  await supabase.from("trades").delete().eq("id", params.data.id);
   res.sendStatus(204);
 });
 
 router.get("/trades/:id/reasons", async (req, res): Promise<void> => {
   const params = GetTradeReasonsParams.safeParse(req.params);
-  if (!params.success) {
-    res.status(400).json({ error: params.error.message });
-    return;
-  }
-
-  const reasons = await db
-    .select()
-    .from(tradeReasonsTable)
-    .where(eq(tradeReasonsTable.tradeId, params.data.id));
-
-  res.json(GetTradeReasonsResponse.parse(reasons));
+  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+  const { data, error } = await supabase.from("trade_reasons").select("*").eq("trade_id", params.data.id);
+  if (error) { res.status(500).json({ error: error.message }); return; }
+  res.json((data ?? []).map(r => ({ id: r.id, tradeId: r.trade_id, reasonType: r.reason_type, reasonText: r.reason_text })));
 });
 
 export default router;
