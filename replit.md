@@ -91,5 +91,7 @@ Full design docs live in `docs/`:
 | `docs/BLUEPRINT_V1.md` | Product vision, all 8 pages, frontend design, UI principles |
 | `docs/BLUEPRINT_V2.md` | Database schema (all 9 tables), API routes (all 30+ endpoints), OpenAPI contract, architecture decisions |
 | `docs/BLUEPRINT_V3.md` | System engineering design, service breakdown (Market/Indicator/Strategy/Risk/AI/Learning), background workers, AI brain pipeline, security, deployment, full phase roadmap |
+| `docs/BLUEPRINT_V4.md` | AI Brain Architecture — memory system, market reasoning engine, multi-agent design (5 agents), learning engine, strategy versioning, ML layer, vector memory, safety rules, 8-step implementation order |
+| `docs/BLUEPRINT_V5.md` | Trading Engine + Strategy Research Lab — backtesting engine, walk-forward testing, paper trader, optimizer, multi-strategy consensus, risk/portfolio manager, execution engine, experiment system, performance metrics |
 
-Next blueprint to write: **V4 — AI Brain Architecture** (RAG, memory, learning, model system).
+Next blueprint to write: **V6 — Dashboard + User Interface + Monitoring System**.

@@ -18,3 +18,15 @@ id = "B5Y3tbhAm0CL_063XNUIG"
 uri = "file://docs/BLUEPRINT_V3.md"
 type = "text"
 title = "Blueprint V3 — System Engineering Design"
+
+[[outputs]]
+id = "hzfb4tcagYV2QobIry_E1"
+uri = "file://docs/BLUEPRINT_V4.md"
+type = "text"
+title = "Blueprint V4 — AI Brain Architecture"
+
+[[outputs]]
+id = "t-8GPrXN3VT5vJFLlgDW7"
+uri = "file://docs/BLUEPRINT_V5.md"
+type = "text"
+title = "Blueprint V5 — Trading Engine + Strategy Research Lab"
