@@ -9,6 +9,7 @@ import dashboardRouter from "./dashboard";
 import backtestsRouter from "./backtests";
 import systemRouter from "./system";
 import aiRouter from "./ai";
+import paperTradingRouter from "./paper-trading";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use(dashboardRouter);
 router.use(backtestsRouter);
 router.use(systemRouter);
 router.use(aiRouter);
+router.use(paperTradingRouter);
 
 export default router;
