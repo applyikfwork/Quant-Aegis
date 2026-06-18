@@ -6,7 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import NotFound from "@/pages/not-found";
 import { Layout } from "@/components/layout";
 
-// Pages
+// Pages — Phase 1 (V1)
 import Dashboard from "@/pages/dashboard";
 import Market from "@/pages/market";
 import Strategies from "@/pages/strategies";
@@ -15,6 +15,14 @@ import Trades from "@/pages/trades";
 import Analytics from "@/pages/analytics";
 import Backtests from "@/pages/backtests";
 import SystemMonitor from "@/pages/system";
+
+// Pages — Phase 2 (V4–V6)
+import AiCenter from "@/pages/ai-center";
+import Portfolio from "@/pages/portfolio";
+import Risk from "@/pages/risk";
+import Learning from "@/pages/learning";
+import Research from "@/pages/research";
+import PaperTrading from "@/pages/paper-trading";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -29,6 +37,7 @@ function Router() {
   return (
     <Layout>
       <Switch>
+        {/* Phase 1 — V1/V2 */}
         <Route path="/" component={Dashboard} />
         <Route path="/market" component={Market} />
         <Route path="/strategies" component={Strategies} />
@@ -37,6 +46,13 @@ function Router() {
         <Route path="/analytics" component={Analytics} />
         <Route path="/backtests" component={Backtests} />
         <Route path="/system" component={SystemMonitor} />
+        {/* Phase 2 — V4/V5/V6 */}
+        <Route path="/ai" component={AiCenter} />
+        <Route path="/portfolio" component={Portfolio} />
+        <Route path="/risk" component={Risk} />
+        <Route path="/learning" component={Learning} />
+        <Route path="/research" component={Research} />
+        <Route path="/paper-trading" component={PaperTrading} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

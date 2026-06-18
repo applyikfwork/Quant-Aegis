@@ -2,25 +2,44 @@ import { Link, useLocation } from "wouter";
 import {
   Activity,
   BarChart2,
+  Brain,
+  Briefcase,
+  FlaskConical,
+  GraduationCap,
   LineChart,
   Settings,
   Shield,
+  ShieldCheck,
   Signal,
   Target,
   Terminal,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
-  { href: "/", label: "Dashboard", icon: Activity },
-  { href: "/market", label: "Market Data", icon: LineChart },
-  { href: "/strategies", label: "Strategies", icon: Target },
-  { href: "/signals", label: "Signals Feed", icon: Signal },
-  { href: "/trades", label: "Trade Journal", icon: BarChart2 },
-  { href: "/analytics", label: "Analytics", icon: BarChart2 },
-  { href: "/backtests", label: "Backtesting", icon: Terminal },
-  { href: "/system", label: "System Monitor", icon: Settings },
+  // ── CORE ─────────────────────────────
+  { href: "/", label: "Dashboard", icon: Activity, group: "Core" },
+  { href: "/market", label: "Market Data", icon: LineChart, group: "Core" },
+  // ── INTELLIGENCE ─────────────────────
+  { href: "/ai", label: "AI Center", icon: Brain, group: "Intelligence" },
+  { href: "/signals", label: "Signals Feed", icon: Signal, group: "Intelligence" },
+  { href: "/learning", label: "Learning Center", icon: GraduationCap, group: "Intelligence" },
+  // ── TRADING ──────────────────────────
+  { href: "/trades", label: "Trade Journal", icon: BarChart2, group: "Trading" },
+  { href: "/paper-trading", label: "Paper Trading", icon: ClipboardList, group: "Trading" },
+  { href: "/portfolio", label: "Portfolio", icon: Briefcase, group: "Trading" },
+  { href: "/risk", label: "Risk Center", icon: ShieldCheck, group: "Trading" },
+  // ── RESEARCH ─────────────────────────
+  { href: "/strategies", label: "Strategies", icon: Target, group: "Research" },
+  { href: "/backtests", label: "Backtesting", icon: Terminal, group: "Research" },
+  { href: "/analytics", label: "Analytics", icon: BarChart2, group: "Research" },
+  { href: "/research", label: "Research Lab", icon: FlaskConical, group: "Research" },
+  // ── SYSTEM ───────────────────────────
+  { href: "/system", label: "System Monitor", icon: Settings, group: "System" },
 ];
+
+const GROUPS = ["Core", "Intelligence", "Trading", "Research", "System"];
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
@@ -35,34 +54,46 @@ export function Layout({ children }: { children: React.ReactNode }) {
             AEGIS QUANT AI
           </span>
         </div>
-        
-        <div className="flex-1 overflow-y-auto py-4">
-          <nav className="space-y-1 px-2">
-            {NAV_ITEMS.map((item) => {
-              const isActive = location === item.href;
-              const Icon = item.icon;
+
+        <div className="flex-1 overflow-y-auto py-3">
+          <nav className="px-2 space-y-4">
+            {GROUPS.map((group) => {
+              const items = NAV_ITEMS.filter((i) => i.group === group);
               return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center px-3 py-2 text-sm rounded-md transition-colors",
-                    isActive
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                      : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
-                  )}
-                >
-                  <Icon className="w-4 h-4 mr-3 shrink-0 opacity-70" />
-                  {item.label}
-                </Link>
+                <div key={group}>
+                  <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+                    {group}
+                  </p>
+                  <div className="space-y-0.5">
+                    {items.map((item) => {
+                      const isActive = location === item.href;
+                      const Icon = item.icon;
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className={cn(
+                            "flex items-center px-3 py-2 text-sm rounded-md transition-colors",
+                            isActive
+                              ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                              : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+                          )}
+                        >
+                          <Icon className="w-4 h-4 mr-3 shrink-0 opacity-70" />
+                          {item.label}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
               );
             })}
           </nav>
         </div>
-        
+
         <div className="p-4 border-t border-border shrink-0">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>v0.1.0-alpha</span>
+            <span>v0.2.0-alpha</span>
             <span className="flex items-center text-success">
               <span className="w-2 h-2 rounded-full bg-success mr-2 animate-pulse" />
               Connected

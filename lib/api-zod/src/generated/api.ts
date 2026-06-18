@@ -546,3 +546,267 @@ export const GetSystemLogsResponseItem = zod.object({
 export const GetSystemLogsResponse = zod.array(GetSystemLogsResponseItem)
 
 
+/**
+ * @summary Run AI analysis on a symbol
+ */
+export const AnalyzeMarketBody = zod.object({
+  "symbol": zod.string(),
+  "timeframe": zod.string()
+})
+
+export const AnalyzeMarketResponse = zod.object({
+  "id": zod.number(),
+  "signalId": zod.number().nullish(),
+  "symbol": zod.string(),
+  "decision": zod.enum(['BUY', 'SELL', 'HOLD']),
+  "confidence": zod.number(),
+  "reasoning": zod.record(zod.string(), zod.unknown()),
+  "agentVotes": zod.record(zod.string(), zod.unknown()),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary List AI decisions
+ */
+export const ListAiDecisionsResponseItem = zod.object({
+  "id": zod.number(),
+  "signalId": zod.number().nullish(),
+  "symbol": zod.string(),
+  "decision": zod.enum(['BUY', 'SELL', 'HOLD']),
+  "confidence": zod.number(),
+  "reasoning": zod.record(zod.string(), zod.unknown()),
+  "agentVotes": zod.record(zod.string(), zod.unknown()),
+  "createdAt": zod.string()
+})
+export const ListAiDecisionsResponse = zod.array(ListAiDecisionsResponseItem)
+
+
+/**
+ * @summary List AI feedback records
+ */
+export const ListAiFeedbackResponseItem = zod.object({
+  "id": zod.number(),
+  "decisionId": zod.number().nullish(),
+  "tradeId": zod.number().nullish(),
+  "prediction": zod.string(),
+  "actualResult": zod.string().nullish(),
+  "correct": zod.boolean().nullish(),
+  "lesson": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+export const ListAiFeedbackResponse = zod.array(ListAiFeedbackResponseItem)
+
+
+/**
+ * @summary Record AI feedback after trade close
+ */
+export const CreateAiFeedbackBody = zod.object({
+  "decisionId": zod.number().optional(),
+  "tradeId": zod.number().optional(),
+  "prediction": zod.string(),
+  "actualResult": zod.string().optional(),
+  "correct": zod.boolean().optional(),
+  "lesson": zod.string().optional()
+})
+
+export const CreateAiFeedbackResponse = zod.object({
+  "id": zod.number(),
+  "decisionId": zod.number().nullish(),
+  "tradeId": zod.number().nullish(),
+  "prediction": zod.string(),
+  "actualResult": zod.string().nullish(),
+  "correct": zod.boolean().nullish(),
+  "lesson": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Calculate position size from risk parameters
+ */
+export const CalculateRiskBody = zod.object({
+  "account": zod.number(),
+  "riskPercent": zod.number(),
+  "entry": zod.number(),
+  "stopLoss": zod.number()
+})
+
+export const CalculateRiskResponse = zod.object({
+  "positionSize": zod.number(),
+  "riskAmount": zod.number(),
+  "stopDistance": zod.number(),
+  "riskReward": zod.number()
+})
+
+
+/**
+ * @summary List strategy experiments
+ */
+export const ListExperimentsResponseItem = zod.object({
+  "id": zod.number(),
+  "strategyId": zod.number().nullish(),
+  "hypothesis": zod.string(),
+  "changeMade": zod.record(zod.string(), zod.unknown()).nullish(),
+  "testPeriod": zod.string().nullish(),
+  "backtestResult": zod.record(zod.string(), zod.unknown()).nullish(),
+  "verdict": zod.enum(['pending', 'approved', 'rejected']),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+export const ListExperimentsResponse = zod.array(ListExperimentsResponseItem)
+
+
+/**
+ * @summary Create a new experiment
+ */
+export const CreateExperimentBody = zod.object({
+  "strategyId": zod.number().optional(),
+  "hypothesis": zod.string(),
+  "changeMade": zod.record(zod.string(), zod.unknown()).optional(),
+  "testPeriod": zod.string().optional(),
+  "backtestResult": zod.record(zod.string(), zod.unknown()).optional(),
+  "verdict": zod.string().optional(),
+  "notes": zod.string().optional()
+})
+
+export const CreateExperimentResponse = zod.object({
+  "id": zod.number(),
+  "strategyId": zod.number().nullish(),
+  "hypothesis": zod.string(),
+  "changeMade": zod.record(zod.string(), zod.unknown()).nullish(),
+  "testPeriod": zod.string().nullish(),
+  "backtestResult": zod.record(zod.string(), zod.unknown()).nullish(),
+  "verdict": zod.enum(['pending', 'approved', 'rejected']),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Update experiment verdict
+ */
+export const UpdateExperimentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateExperimentBody = zod.object({
+  "strategyId": zod.number().optional(),
+  "hypothesis": zod.string(),
+  "changeMade": zod.record(zod.string(), zod.unknown()).optional(),
+  "testPeriod": zod.string().optional(),
+  "backtestResult": zod.record(zod.string(), zod.unknown()).optional(),
+  "verdict": zod.string().optional(),
+  "notes": zod.string().optional()
+})
+
+export const UpdateExperimentResponse = zod.object({
+  "id": zod.number(),
+  "strategyId": zod.number().nullish(),
+  "hypothesis": zod.string(),
+  "changeMade": zod.record(zod.string(), zod.unknown()).nullish(),
+  "testPeriod": zod.string().nullish(),
+  "backtestResult": zod.record(zod.string(), zod.unknown()).nullish(),
+  "verdict": zod.enum(['pending', 'approved', 'rejected']),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary List paper trades
+ */
+export const ListPaperTradesResponseItem = zod.object({
+  "id": zod.number(),
+  "signalId": zod.number().nullish(),
+  "strategyId": zod.number().nullish(),
+  "symbol": zod.string(),
+  "side": zod.enum(['long', 'short']),
+  "entryPrice": zod.number(),
+  "exitPrice": zod.number().nullish(),
+  "quantity": zod.number(),
+  "stopLoss": zod.number().nullish(),
+  "takeProfit": zod.number().nullish(),
+  "profitLoss": zod.number().nullish(),
+  "profitPercent": zod.number().nullish(),
+  "status": zod.enum(['open', 'closed']),
+  "entryTime": zod.string(),
+  "exitTime": zod.string().nullish()
+})
+export const ListPaperTradesResponse = zod.array(ListPaperTradesResponseItem)
+
+
+/**
+ * @summary Open a paper trade
+ */
+export const CreatePaperTradeBody = zod.object({
+  "signalId": zod.number().optional(),
+  "strategyId": zod.number().optional(),
+  "symbol": zod.string(),
+  "side": zod.string(),
+  "entryPrice": zod.number(),
+  "exitPrice": zod.number().optional(),
+  "quantity": zod.number(),
+  "stopLoss": zod.number().optional(),
+  "takeProfit": zod.number().optional(),
+  "status": zod.string().optional()
+})
+
+export const CreatePaperTradeResponse = zod.object({
+  "id": zod.number(),
+  "signalId": zod.number().nullish(),
+  "strategyId": zod.number().nullish(),
+  "symbol": zod.string(),
+  "side": zod.enum(['long', 'short']),
+  "entryPrice": zod.number(),
+  "exitPrice": zod.number().nullish(),
+  "quantity": zod.number(),
+  "stopLoss": zod.number().nullish(),
+  "takeProfit": zod.number().nullish(),
+  "profitLoss": zod.number().nullish(),
+  "profitPercent": zod.number().nullish(),
+  "status": zod.enum(['open', 'closed']),
+  "entryTime": zod.string(),
+  "exitTime": zod.string().nullish()
+})
+
+
+/**
+ * @summary Update (close) a paper trade
+ */
+export const UpdatePaperTradeParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdatePaperTradeBody = zod.object({
+  "signalId": zod.number().optional(),
+  "strategyId": zod.number().optional(),
+  "symbol": zod.string(),
+  "side": zod.string(),
+  "entryPrice": zod.number(),
+  "exitPrice": zod.number().optional(),
+  "quantity": zod.number(),
+  "stopLoss": zod.number().optional(),
+  "takeProfit": zod.number().optional(),
+  "status": zod.string().optional()
+})
+
+export const UpdatePaperTradeResponse = zod.object({
+  "id": zod.number(),
+  "signalId": zod.number().nullish(),
+  "strategyId": zod.number().nullish(),
+  "symbol": zod.string(),
+  "side": zod.enum(['long', 'short']),
+  "entryPrice": zod.number(),
+  "exitPrice": zod.number().nullish(),
+  "quantity": zod.number(),
+  "stopLoss": zod.number().nullish(),
+  "takeProfit": zod.number().nullish(),
+  "profitLoss": zod.number().nullish(),
+  "profitPercent": zod.number().nullish(),
+  "status": zod.enum(['open', 'closed']),
+  "entryTime": zod.string(),
+  "exitTime": zod.string().nullish()
+})
+
+

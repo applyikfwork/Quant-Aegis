@@ -32,6 +32,7 @@ A professional AI-powered quantitative trading research platform for tracking cr
   - `signals.ts` — signals table
   - `trades.ts` — trades, trade_reasons tables
   - `analytics.ts` — backtests, activity_events, system_logs tables
+  - `ai.ts` — ai_memory, ai_decisions, ai_feedback, strategy_versions, experiments, paper_trades
 - `artifacts/api-server/src/routes/` — Express route handlers
   - `market.ts` — /market/prices, /market/candles/:s/:tf, /market/indicators/:s/:tf
   - `strategies.ts` — /strategies CRUD + /strategies/:id/backtest
@@ -41,6 +42,7 @@ A professional AI-powered quantitative trading research platform for tracking cr
   - `dashboard.ts` — /dashboard/summary, /dashboard/recent-activity
   - `backtests.ts` — /backtests CRUD (simulated backtest results)
   - `system.ts` — /system/status, /system/logs
+  - `ai.ts` — /ai/analyze, /ai/decisions, /ai/feedback, /strategies/:id/versions, /experiments CRUD, /paper-trades CRUD, /risk/calculate
 - `artifacts/aegis-quant/src/` — React frontend
 - `lib/api-client-react/src/generated/` — Generated React Query hooks (do not edit)
 - `lib/api-zod/src/generated/` — Generated Zod schemas (do not edit)
@@ -52,10 +54,12 @@ A professional AI-powered quantitative trading research platform for tracking cr
 - Backtest execution is simulated server-side (random but plausible stats) — Phase 4 will add real walk-forward testing
 - CoinGecko public API used for live prices; fallback mock data returned if rate-limited (60 req/min free tier)
 - Activity events are recorded on every trade open/close, signal generation, backtest completion, and strategy creation — feeds the dashboard activity feed
+- AI brain uses rule-based analysis (EMA/RSI/ADX/MACD + historical trade stats) — no external LLM required. 5-agent pipeline: Market Analyst, Strategy Analyst, Risk Analyst, Research Agent, Decision Agent. Decisions + reasoning stored in DB.
+- Paper trades track full lifecycle: open with entry price/qty, close with exit price → P&L auto-calculated server-side
 
 ## Product
 
-**Phase 1 complete:**
+**Phase 1 complete (V1/V2):**
 - Dashboard — live prices (CoinGecko), 7-day P&L chart, key metrics, recent activity feed
 - Market Data — live price grid for 8 crypto pairs with 24h stats
 - Strategy Library — full CRUD with win rate, profit factor, active toggle
@@ -64,6 +68,22 @@ A professional AI-powered quantitative trading research platform for tracking cr
 - Analytics — cumulative P&L curve, daily bar chart, drawdown, sharpe, strategy comparison
 - Backtesting — run backtests against strategies (simulated), view historical results
 - System Monitor — service health indicators, uptime, recent system logs
+
+**Phase 2 complete (V4/V5/V6):**
+- AI Center — rule-based 5-agent market analysis (POST /ai/analyze), decision history with full reasoning
+- Learning Center — AI feedback loop, decision performance, accuracy tracking
+- Portfolio — open positions overview, allocation, risk-adjusted P&L
+- Risk Center — position sizing calculator (/risk/calculate), risk rules display, daily P&L limits
+- Research Lab — strategy experiments with hypothesis tracking, verdict workflow (pending/approved/rejected)
+- Paper Trading — full paper trade lifecycle (open long/short, close with exit price, auto P&L)
+
+## Navigation structure (14 pages)
+
+**Core:** Dashboard, Market Data
+**Intelligence:** AI Center, Signals Feed, Learning Center
+**Trading:** Trade Journal, Paper Trading, Portfolio, Risk Center
+**Research:** Strategies, Backtesting, Analytics, Research Lab
+**System:** System Monitor
 
 ## User preferences
 
@@ -75,6 +95,7 @@ _Populate as you build — explicit user instructions worth remembering across s
 - Query params on endpoints create `<OperationId>QueryParams` Zod schemas that can collide with TypeScript types in the barrel export. Path params are safe. Put new query params in `components/schemas` or use path params to avoid TS2308 errors.
 - Never import hooks from relative paths — always `@workspace/api-client-react`
 - The `pnpm run push` command uses Drizzle Kit push (not migrate) — safe for dev, Replit publish handles prod migrations automatically
+- New paths in `openapi.yaml` must be at the top-level `paths:` indentation (2 spaces). If they accidentally land inside `components/schemas:`, codegen will error with "Property /X is not expected to be here". Always check where new path entries are placed after editing.
 
 ## Pointers
 
@@ -93,5 +114,5 @@ Full design docs live in `docs/`:
 | `docs/BLUEPRINT_V3.md` | System engineering design, service breakdown (Market/Indicator/Strategy/Risk/AI/Learning), background workers, AI brain pipeline, security, deployment, full phase roadmap |
 | `docs/BLUEPRINT_V4.md` | AI Brain Architecture — memory system, market reasoning engine, multi-agent design (5 agents), learning engine, strategy versioning, ML layer, vector memory, safety rules, 8-step implementation order |
 | `docs/BLUEPRINT_V5.md` | Trading Engine + Strategy Research Lab — backtesting engine, walk-forward testing, paper trader, optimizer, multi-strategy consensus, risk/portfolio manager, execution engine, experiment system, performance metrics |
-
-Next blueprint to write: **V6 — Dashboard + User Interface + Monitoring System**.
+| `docs/BLUEPRINT_V6.md` | Dashboard + UI + Monitoring — all 14 pages, navigation structure, layout system, component patterns, real-time data flows, performance monitoring, mobile responsiveness |
+| `docs/BLUEPRINT_V7.md` | Deployment + Production Architecture — containerization, CI/CD, secrets management, autoscaling, observability, disaster recovery, compliance, cost optimization |

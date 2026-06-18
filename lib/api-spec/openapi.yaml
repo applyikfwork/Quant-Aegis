@@ -25,6 +25,14 @@ tags:
     description: Backtesting
   - name: system
     description: System monitoring
+  - name: ai
+    description: AI brain - reasoning, decisions, feedback
+  - name: risk
+    description: Risk engine and position sizing
+  - name: experiments
+    description: Strategy research experiments
+  - name: paperTrades
+    description: Paper trading simulation
 
 paths:
   /healthz:
@@ -548,6 +556,206 @@ paths:
                 items:
                   $ref: "#/components/schemas/SystemLog"
 
+  # ── AI BRAIN ─────────────────────────────────────────────────────────────────
+  /ai/analyze:
+    post:
+      operationId: analyzeMarket
+      tags: [ai]
+      summary: Run AI analysis on a symbol
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiAnalyzeInput"
+      responses:
+        "200":
+          description: AI decision with reasoning
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiDecision"
+
+  /ai/decisions:
+    get:
+      operationId: listAiDecisions
+      tags: [ai]
+      summary: List AI decisions
+      responses:
+        "200":
+          description: AI decision history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AiDecision"
+
+  /ai/feedback:
+    get:
+      operationId: listAiFeedback
+      tags: [ai]
+      summary: List AI feedback records
+      responses:
+        "200":
+          description: Feedback list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AiFeedback"
+    post:
+      operationId: createAiFeedback
+      tags: [ai]
+      summary: Record AI feedback after trade close
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiFeedbackInput"
+      responses:
+        "200":
+          description: Created feedback record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiFeedback"
+
+  /risk/calculate:
+    post:
+      operationId: calculateRisk
+      tags: [risk]
+      summary: Calculate position size from risk parameters
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RiskCalcInput"
+      responses:
+        "200":
+          description: Position sizing result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RiskCalcResult"
+
+  /experiments:
+    get:
+      operationId: listExperiments
+      tags: [experiments]
+      summary: List strategy experiments
+      responses:
+        "200":
+          description: Experiment list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Experiment"
+    post:
+      operationId: createExperiment
+      tags: [experiments]
+      summary: Create a new experiment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExperimentInput"
+      responses:
+        "200":
+          description: Created experiment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Experiment"
+
+  /experiments/{id}:
+    put:
+      operationId: updateExperiment
+      tags: [experiments]
+      summary: Update experiment verdict
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExperimentInput"
+      responses:
+        "200":
+          description: Updated experiment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Experiment"
+
+  /paper-trades:
+    get:
+      operationId: listPaperTrades
+      tags: [paperTrades]
+      summary: List paper trades
+      responses:
+        "200":
+          description: Paper trades list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PaperTrade"
+    post:
+      operationId: createPaperTrade
+      tags: [paperTrades]
+      summary: Open a paper trade
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaperTradeInput"
+      responses:
+        "200":
+          description: Created paper trade
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaperTrade"
+
+  /paper-trades/{id}:
+    put:
+      operationId: updatePaperTrade
+      tags: [paperTrades]
+      summary: Update (close) a paper trade
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaperTradeInput"
+      responses:
+        "200":
+          description: Updated paper trade
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaperTrade"
+
 components:
   schemas:
     HealthStatus:
@@ -1005,6 +1213,216 @@ components:
         symbol:
           type: string
         timeframe:
+          type: string
+
+    # ── AI BRAIN ─────────────────────────────────────────────────────────────────
+    AiAnalyzeInput:
+      type: object
+      required: [symbol, timeframe]
+      properties:
+        symbol:
+          type: string
+        timeframe:
+          type: string
+
+    AiDecision:
+      type: object
+      required: [id, symbol, decision, confidence, reasoning, agentVotes, createdAt]
+      properties:
+        id:
+          type: integer
+        signalId:
+          type: ["integer", "null"]
+        symbol:
+          type: string
+        decision:
+          type: string
+          enum: [BUY, SELL, HOLD]
+        confidence:
+          type: integer
+        reasoning:
+          type: object
+          additionalProperties: true
+        agentVotes:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+
+    AiFeedback:
+      type: object
+      required: [id, prediction, createdAt]
+      properties:
+        id:
+          type: integer
+        decisionId:
+          type: ["integer", "null"]
+        tradeId:
+          type: ["integer", "null"]
+        prediction:
+          type: string
+        actualResult:
+          type: ["string", "null"]
+        correct:
+          type: ["boolean", "null"]
+        lesson:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    AiFeedbackInput:
+      type: object
+      required: [prediction]
+      properties:
+        decisionId:
+          type: integer
+        tradeId:
+          type: integer
+        prediction:
+          type: string
+        actualResult:
+          type: string
+        correct:
+          type: boolean
+        lesson:
+          type: string
+
+    # ── RISK ENGINE ───────────────────────────────────────────────────────────────
+    RiskCalcInput:
+      type: object
+      required: [account, riskPercent, entry, stopLoss]
+      properties:
+        account:
+          type: number
+        riskPercent:
+          type: number
+        entry:
+          type: number
+        stopLoss:
+          type: number
+
+    RiskCalcResult:
+      type: object
+      required: [positionSize, riskAmount, stopDistance, riskReward]
+      properties:
+        positionSize:
+          type: number
+        riskAmount:
+          type: number
+        stopDistance:
+          type: number
+        riskReward:
+          type: number
+
+    # ── EXPERIMENTS ───────────────────────────────────────────────────────────────
+    Experiment:
+      type: object
+      required: [id, hypothesis, verdict, createdAt]
+      properties:
+        id:
+          type: integer
+        strategyId:
+          type: ["integer", "null"]
+        hypothesis:
+          type: string
+        changeMade:
+          type: ["object", "null"]
+          additionalProperties: true
+        testPeriod:
+          type: ["string", "null"]
+        backtestResult:
+          type: ["object", "null"]
+          additionalProperties: true
+        verdict:
+          type: string
+          enum: [pending, approved, rejected]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    ExperimentInput:
+      type: object
+      required: [hypothesis]
+      properties:
+        strategyId:
+          type: integer
+        hypothesis:
+          type: string
+        changeMade:
+          type: object
+          additionalProperties: true
+        testPeriod:
+          type: string
+        backtestResult:
+          type: object
+          additionalProperties: true
+        verdict:
+          type: string
+        notes:
+          type: string
+
+    # ── PAPER TRADES ──────────────────────────────────────────────────────────────
+    PaperTrade:
+      type: object
+      required: [id, symbol, side, entryPrice, quantity, status, entryTime]
+      properties:
+        id:
+          type: integer
+        signalId:
+          type: ["integer", "null"]
+        strategyId:
+          type: ["integer", "null"]
+        symbol:
+          type: string
+        side:
+          type: string
+          enum: [long, short]
+        entryPrice:
+          type: number
+        exitPrice:
+          type: ["number", "null"]
+        quantity:
+          type: number
+        stopLoss:
+          type: ["number", "null"]
+        takeProfit:
+          type: ["number", "null"]
+        profitLoss:
+          type: ["number", "null"]
+        profitPercent:
+          type: ["number", "null"]
+        status:
+          type: string
+          enum: [open, closed]
+        entryTime:
+          type: string
+        exitTime:
+          type: ["string", "null"]
+
+    PaperTradeInput:
+      type: object
+      required: [symbol, side, entryPrice, quantity]
+      properties:
+        signalId:
+          type: integer
+        strategyId:
+          type: integer
+        symbol:
+          type: string
+        side:
+          type: string
+        entryPrice:
+          type: number
+        exitPrice:
+          type: number
+        quantity:
+          type: number
+        stopLoss:
+          type: number
+        takeProfit:
+          type: number
+        status:
           type: string
 
     # ── SYSTEM ──────────────────────────────────────────────────────────────────

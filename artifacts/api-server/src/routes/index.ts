@@ -8,6 +8,7 @@ import analyticsRouter from "./analytics";
 import dashboardRouter from "./dashboard";
 import backtestsRouter from "./backtests";
 import systemRouter from "./system";
+import aiRouter from "./ai";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(analyticsRouter);
 router.use(dashboardRouter);
 router.use(backtestsRouter);
 router.use(systemRouter);
+router.use(aiRouter);
 
 export default router;

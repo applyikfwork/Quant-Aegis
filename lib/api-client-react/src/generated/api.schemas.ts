@@ -340,6 +340,180 @@ export interface BacktestInput {
   timeframe?: string;
 }
 
+export interface AiAnalyzeInput {
+  symbol: string;
+  timeframe: string;
+}
+
+export type AiDecisionDecision = typeof AiDecisionDecision[keyof typeof AiDecisionDecision];
+
+
+export const AiDecisionDecision = {
+  BUY: 'BUY',
+  SELL: 'SELL',
+  HOLD: 'HOLD',
+} as const;
+
+export type AiDecisionReasoning = { [key: string]: unknown };
+
+export type AiDecisionAgentVotes = { [key: string]: unknown };
+
+export interface AiDecision {
+  id: number;
+  /** @nullable */
+  signalId?: number | null;
+  symbol: string;
+  decision: AiDecisionDecision;
+  confidence: number;
+  reasoning: AiDecisionReasoning;
+  agentVotes: AiDecisionAgentVotes;
+  createdAt: string;
+}
+
+export interface AiFeedback {
+  id: number;
+  /** @nullable */
+  decisionId?: number | null;
+  /** @nullable */
+  tradeId?: number | null;
+  prediction: string;
+  /** @nullable */
+  actualResult?: string | null;
+  /** @nullable */
+  correct?: boolean | null;
+  /** @nullable */
+  lesson?: string | null;
+  createdAt: string;
+}
+
+export interface AiFeedbackInput {
+  decisionId?: number;
+  tradeId?: number;
+  prediction: string;
+  actualResult?: string;
+  correct?: boolean;
+  lesson?: string;
+}
+
+export interface RiskCalcInput {
+  account: number;
+  riskPercent: number;
+  entry: number;
+  stopLoss: number;
+}
+
+export interface RiskCalcResult {
+  positionSize: number;
+  riskAmount: number;
+  stopDistance: number;
+  riskReward: number;
+}
+
+/**
+ * @nullable
+ */
+export type ExperimentChangeMade = { [key: string]: unknown } | null;
+
+/**
+ * @nullable
+ */
+export type ExperimentBacktestResult = { [key: string]: unknown } | null;
+
+export type ExperimentVerdict = typeof ExperimentVerdict[keyof typeof ExperimentVerdict];
+
+
+export const ExperimentVerdict = {
+  pending: 'pending',
+  approved: 'approved',
+  rejected: 'rejected',
+} as const;
+
+export interface Experiment {
+  id: number;
+  /** @nullable */
+  strategyId?: number | null;
+  hypothesis: string;
+  /** @nullable */
+  changeMade?: ExperimentChangeMade;
+  /** @nullable */
+  testPeriod?: string | null;
+  /** @nullable */
+  backtestResult?: ExperimentBacktestResult;
+  verdict: ExperimentVerdict;
+  /** @nullable */
+  notes?: string | null;
+  createdAt: string;
+}
+
+export type ExperimentInputChangeMade = { [key: string]: unknown };
+
+export type ExperimentInputBacktestResult = { [key: string]: unknown };
+
+export interface ExperimentInput {
+  strategyId?: number;
+  hypothesis: string;
+  changeMade?: ExperimentInputChangeMade;
+  testPeriod?: string;
+  backtestResult?: ExperimentInputBacktestResult;
+  verdict?: string;
+  notes?: string;
+}
+
+export type PaperTradeSide = typeof PaperTradeSide[keyof typeof PaperTradeSide];
+
+
+export const PaperTradeSide = {
+  long: 'long',
+  short: 'short',
+} as const;
+
+export type PaperTradeStatus = typeof PaperTradeStatus[keyof typeof PaperTradeStatus];
+
+
+export const PaperTradeStatus = {
+  open: 'open',
+  closed: 'closed',
+} as const;
+
+export interface PaperTrade {
+  id: number;
+  /** @nullable */
+  signalId?: number | null;
+  /** @nullable */
+  strategyId?: number | null;
+  symbol: string;
+  side: PaperTradeSide;
+  entryPrice: number;
+  /** @nullable */
+  exitPrice?: number | null;
+  quantity: number;
+  /** @nullable */
+  stopLoss?: number | null;
+  /** @nullable */
+  takeProfit?: number | null;
+  /** @nullable */
+  profitLoss?: number | null;
+  /** @nullable */
+  profitPercent?: number | null;
+  status: PaperTradeStatus;
+  entryTime: string;
+  /** @nullable */
+  exitTime?: string | null;
+}
+
+export interface PaperTradeInput {
+  signalId?: number;
+  strategyId?: number;
+  symbol: string;
+  side: string;
+  entryPrice: number;
+  exitPrice?: number;
+  quantity: number;
+  stopLoss?: number;
+  takeProfit?: number;
+  status?: string;
+}
+
 export type SystemStatusStatus = typeof SystemStatusStatus[keyof typeof SystemStatusStatus];
 
 
