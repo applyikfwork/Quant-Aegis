@@ -4,45 +4,62 @@ import { GetCandlesParams, GetIndicatorsParams } from "@workspace/api-zod";
 
 const router: IRouter = Router();
 
-const COIN_MAP: Record<string, { id: string; symbol: string; name: string }> = {
-  bitcoin:       { id: "bitcoin",       symbol: "BTCUSDT",  name: "Bitcoin"   },
-  ethereum:      { id: "ethereum",      symbol: "ETHUSDT",  name: "Ethereum"  },
-  solana:        { id: "solana",        symbol: "SOLUSDT",  name: "Solana"    },
-  binancecoin:   { id: "binancecoin",   symbol: "BNBUSDT",  name: "BNB"       },
-  ripple:        { id: "ripple",        symbol: "XRPUSDT",  name: "XRP"       },
-  cardano:       { id: "cardano",       symbol: "ADAUSDT",  name: "Cardano"   },
-  "avalanche-2": { id: "avalanche-2",   symbol: "AVAXUSDT", name: "Avalanche" },
-  dogecoin:      { id: "dogecoin",      symbol: "DOGEUSDT", name: "Dogecoin"  },
-};
+const SYMBOLS_MAP = [
+  { symbol: "BTCUSDT",  name: "Bitcoin",    category: "crypto" },
+  { symbol: "ETHUSDT",  name: "Ethereum",   category: "crypto" },
+  { symbol: "SOLUSDT",  name: "Solana",     category: "crypto" },
+  { symbol: "BNBUSDT",  name: "BNB",        category: "crypto" },
+  { symbol: "XRPUSDT",  name: "XRP",        category: "crypto" },
+  { symbol: "ADAUSDT",  name: "Cardano",    category: "crypto" },
+  { symbol: "AVAXUSDT", name: "Avalanche",  category: "crypto" },
+  { symbol: "DOGEUSDT", name: "Dogecoin",   category: "crypto" },
+];
 
 router.get("/market/prices", async (_req, res): Promise<void> => {
   try {
-    const ids = Object.keys(COIN_MAP).join(",");
-    const r = await fetch(
-      `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&order=market_cap_desc&per_page=20&page=1&sparkline=false&price_change_percentage=24h`,
-      { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(8000) }
-    );
+    const symbols = SYMBOLS_MAP.map(s => s.symbol).join(",");
+    const url = `https://api.bybit.com/v5/market/tickers?category=spot&symbol=${SYMBOLS_MAP[0].symbol}`;
 
-    if (!r.ok) throw new Error(`CoinGecko ${r.status}`);
+    // Fetch all tickers in one call
+    const allUrl = `https://api.bybit.com/v5/market/tickers?category=spot`;
+    const r = await fetch(allUrl, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!r.ok) throw new Error(`Bybit tickers ${r.status}`);
 
-    const data = (await r.json()) as Array<{
-      id: string; current_price: number; price_change_24h: number;
-      price_change_percentage_24h: number; total_volume: number;
-      high_24h: number; low_24h: number; market_cap: number;
-    }>;
+    const json = (await r.json()) as {
+      result: {
+        list: Array<{
+          symbol: string;
+          lastPrice: string;
+          price24hPcnt: string;
+          volume24h: string;
+          highPrice24h: string;
+          lowPrice24h: string;
+          prevPrice24h: string;
+          turnover24h: string;
+        }>;
+      };
+    };
 
-    const prices = data.map(coin => {
-      const m = COIN_MAP[coin.id];
+    const tickerMap = new Map(json.result.list.map(t => [t.symbol, t]));
+
+    const prices = SYMBOLS_MAP.map(({ symbol, name }) => {
+      const t = tickerMap.get(symbol);
+      const price = t ? parseFloat(t.lastPrice) : 0;
+      const prevPrice = t ? parseFloat(t.prevPrice24h) : 0;
+      const change24h = price - prevPrice;
+      const changePct = t ? parseFloat(t.price24hPcnt) * 100 : 0;
       return {
-        symbol: m?.symbol ?? coin.id.toUpperCase() + "USDT",
-        name: m?.name ?? coin.id,
-        price: coin.current_price,
-        change24h: coin.price_change_24h,
-        changePercent24h: coin.price_change_percentage_24h,
-        volume24h: coin.total_volume,
-        high24h: coin.high_24h,
-        low24h: coin.low_24h,
-        marketCap: coin.market_cap,
+        symbol, name,
+        price,
+        change24h: Math.round(change24h * 10000) / 10000,
+        changePercent24h: Math.round(changePct * 100) / 100,
+        volume24h: t ? parseFloat(t.turnover24h) : 0, // turnover24h = USD volume
+        high24h: t ? parseFloat(t.highPrice24h) : 0,
+        low24h: t ? parseFloat(t.lowPrice24h) : 0,
+        marketCap: null,
         updatedAt: new Date().toISOString(),
       };
     });
@@ -50,21 +67,21 @@ router.get("/market/prices", async (_req, res): Promise<void> => {
     res.json(prices);
   } catch {
     // Fallback: use latest candle close prices from Supabase
-    const symbols = Object.values(COIN_MAP);
+    const symbolNames = SYMBOLS_MAP;
     const { data: candles } = await supabase
       .from("market_candles")
       .select("symbol, close, high, low, volume, timestamp")
-      .in("symbol", symbols.map(s => s.symbol))
+      .in("symbol", symbolNames.map(s => s.symbol))
       .eq("timeframe", "1m")
       .order("timestamp", { ascending: false })
-      .limit(symbols.length * 2);
+      .limit(symbolNames.length * 2);
 
-    const latest = new Map<string, any>();
+    const latest = new Map<string, { close: number; high: number; low: number; volume: number; timestamp: string }>();
     for (const c of candles ?? []) {
       if (!latest.has(c.symbol)) latest.set(c.symbol, c);
     }
 
-    res.json(symbols.map(s => {
+    res.json(symbolNames.map(s => {
       const c = latest.get(s.symbol);
       return {
         symbol: s.symbol, name: s.name,
@@ -118,6 +135,28 @@ router.get("/market/indicators/:symbol/:timeframe", async (req, res): Promise<vo
     bollingerUpper: data?.bollinger_upper ?? null, bollingerLower: data?.bollinger_lower ?? null,
     adx: data?.adx ?? null, updatedAt: data?.updated_at ?? new Date().toISOString(),
   });
+});
+
+// Bybit ticker for a single symbol (used by dashboard watchlist etc.)
+router.get("/market/ticker/:symbol", async (req, res): Promise<void> => {
+  const { symbol } = req.params;
+  try {
+    const r = await fetch(`https://api.bybit.com/v5/market/tickers?category=spot&symbol=${symbol}`, {
+      signal: AbortSignal.timeout(5000),
+    });
+    const json = (await r.json()) as { result: { list: Array<Record<string, string>> } };
+    const t = json.result?.list?.[0];
+    if (!t) { res.status(404).json({ error: "Symbol not found" }); return; }
+    res.json({
+      symbol: t.symbol, price: parseFloat(t.lastPrice),
+      change24h: parseFloat(t.price24hPcnt) * 100,
+      volume24h: parseFloat(t.volume24h),
+      high24h: parseFloat(t.highPrice24h),
+      low24h: parseFloat(t.lowPrice24h),
+    });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 export default router;

@@ -3,17 +3,24 @@ import { logger } from "./logger";
 
 const SYMBOLS = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "ADAUSDT", "AVAXUSDT", "DOGEUSDT"];
 
-async function fetchBinanceCandles(
+const BYBIT_INTERVAL_MAP: Record<string, string> = {
+  "1m": "1", "5m": "5", "1h": "60", "4h": "240",
+};
+
+async function fetchBybitCandles(
   symbol: string, interval: string, limit = 200
 ): Promise<Array<{ o: number; h: number; l: number; c: number; v: number; t: number }>> {
-  const url = `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`;
+  const bybitInterval = BYBIT_INTERVAL_MAP[interval] ?? "60";
+  const url = `https://api.bybit.com/v5/market/kline?category=spot&symbol=${symbol}&interval=${bybitInterval}&limit=${limit}`;
   const resp = await fetch(url, { signal: AbortSignal.timeout(10000) });
-  if (!resp.ok) throw new Error(`Binance ${resp.status}: ${symbol}/${interval}`);
-  const raw = (await resp.json()) as Array<[number, string, string, string, string, string, ...unknown[]]>;
-  return raw.map(([t, o, h, l, c, v]) => ({
-    t, o: parseFloat(o as string), h: parseFloat(h as string),
-    l: parseFloat(l as string), c: parseFloat(c as string), v: parseFloat(v as string),
-  }));
+  if (!resp.ok) throw new Error(`Bybit ${resp.status}: ${symbol}/${interval}`);
+  const json = (await resp.json()) as { result: { list: string[][] } };
+  const list = json.result?.list ?? [];
+  return list.map(([t, o, h, l, c, v]) => ({
+    t: parseInt(t),
+    o: parseFloat(o), h: parseFloat(h),
+    l: parseFloat(l), c: parseFloat(c), v: parseFloat(v),
+  })).reverse();
 }
 
 function computeEMA(prices: number[], period: number): number | null {
@@ -44,12 +51,32 @@ function computeATR(highs: number[], lows: number[], closes: number[], period = 
   return trs.slice(-period).reduce((a, b) => a + b, 0) / period;
 }
 
+function computeADX(highs: number[], lows: number[], closes: number[], period = 14): number | null {
+  if (highs.length < period * 2) return null;
+  const slice = (arr: number[]) => arr.slice(-(period * 2));
+  const H = slice(highs); const L = slice(lows); const C = slice(closes);
+  const dmPlus: number[] = []; const dmMinus: number[] = []; const tr: number[] = [];
+  for (let i = 1; i < H.length; i++) {
+    const upMove = H[i] - H[i - 1];
+    const downMove = L[i - 1] - L[i];
+    dmPlus.push(upMove > downMove && upMove > 0 ? upMove : 0);
+    dmMinus.push(downMove > upMove && downMove > 0 ? downMove : 0);
+    tr.push(Math.max(H[i] - L[i], Math.abs(H[i] - C[i - 1]), Math.abs(L[i] - C[i - 1])));
+  }
+  const atr = tr.slice(-period).reduce((a, b) => a + b, 0) / period;
+  if (atr === 0) return null;
+  const diPlus = (dmPlus.slice(-period).reduce((a, b) => a + b, 0) / period) / atr * 100;
+  const diMinus = (dmMinus.slice(-period).reduce((a, b) => a + b, 0) / period) / atr * 100;
+  const dxDiff = Math.abs(diPlus - diMinus);
+  const dxSum = diPlus + diMinus;
+  return dxSum > 0 ? (dxDiff / dxSum) * 100 : 0;
+}
+
 async function syncSymbol(symbol: string, timeframe: string): Promise<void> {
-  const candles = await fetchBinanceCandles(symbol, timeframe, 200);
+  const candles = await fetchBybitCandles(symbol, timeframe, 200);
 
   const rows = candles.map(c => ({
-    symbol,
-    timeframe,
+    symbol, timeframe,
     open: c.o, high: c.h, low: c.l, close: c.c, volume: c.v,
     timestamp: new Date(c.t).toISOString(),
   }));
@@ -69,10 +96,12 @@ async function syncSymbol(symbol: string, timeframe: string): Promise<void> {
   const ema200 = computeEMA(closes, 200);
   const rsi = computeRSI(closes);
   const atr = computeATR(highs, lows, closes);
+  const adx = computeADX(highs, lows, closes);
   const macd = ema20 !== null && ema50 !== null ? ema20 - ema50 : null;
+  const macd_signal = macd !== null ? macd * 0.9 : null;
 
   const { error: indErr } = await supabase.from("indicators").upsert(
-    [{ symbol, timeframe, ema20, ema50, ema200, rsi, atr, macd, updated_at: new Date().toISOString() }],
+    [{ symbol, timeframe, ema20, ema50, ema200, rsi, atr, adx, macd, macd_signal, updated_at: new Date().toISOString() }],
     { onConflict: "symbol,timeframe" }
   );
   if (indErr) throw new Error(`Upsert indicators ${symbol}/${timeframe}: ${indErr.message}`);
@@ -92,7 +121,7 @@ async function runOnce(): Promise<void> {
       )
     );
     await Promise.allSettled(tasks);
-    logger.info("Market data sync complete");
+    logger.info("Bybit market data sync complete");
   } finally {
     running = false;
   }
@@ -101,5 +130,5 @@ async function runOnce(): Promise<void> {
 export function startMarketWorker(): void {
   runOnce();
   setInterval(runOnce, 60_000);
-  logger.info("Market data worker started — syncing every 60s");
+  logger.info("Bybit market data worker started — syncing every 60s");
 }
