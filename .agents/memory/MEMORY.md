@@ -1,0 +1,1 @@
+- [Orval query-param collision](orval-query-param-collision.md) — Query params generate `<OperationId>QueryParams` in both api.ts and types/, causing TS2308; use path params or remove query params to avoid.

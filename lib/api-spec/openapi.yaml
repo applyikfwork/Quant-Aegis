@@ -1,15 +1,31 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: AEGIS QUANT AI - Quantitative Trading Research Platform API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: market
+    description: Market data operations
+  - name: strategies
+    description: Strategy management
+  - name: signals
+    description: Trading signals
+  - name: trades
+    description: Trade management
+  - name: analytics
+    description: Performance analytics
+  - name: dashboard
+    description: Dashboard summary
+  - name: backtests
+    description: Backtesting
+  - name: system
+    description: System monitoring
+
 paths:
   /healthz:
     get:
@@ -24,6 +40,514 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ── MARKET DATA ──────────────────────────────────────────────────────────────
+  /market/prices:
+    get:
+      operationId: getMarketPrices
+      tags: [market]
+      summary: Get live market prices
+      description: Returns live prices for tracked symbols
+      responses:
+        "200":
+          description: Live market prices
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MarketPrice"
+
+  /market/candles/{symbol}/{timeframe}:
+    get:
+      operationId: getCandles
+      tags: [market]
+      summary: Get OHLCV candles for a symbol and timeframe
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: timeframe
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Candle data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Candle"
+
+  /market/indicators/{symbol}/{timeframe}:
+    get:
+      operationId: getIndicators
+      tags: [market]
+      summary: Get computed indicators for a symbol and timeframe
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: timeframe
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Indicator values
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Indicators"
+
+  # ── STRATEGIES ───────────────────────────────────────────────────────────────
+  /strategies:
+    get:
+      operationId: listStrategies
+      tags: [strategies]
+      summary: List all strategies
+      responses:
+        "200":
+          description: List of strategies
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Strategy"
+    post:
+      operationId: createStrategy
+      tags: [strategies]
+      summary: Create a new strategy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StrategyInput"
+      responses:
+        "201":
+          description: Strategy created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Strategy"
+
+  /strategies/{id}:
+    get:
+      operationId: getStrategy
+      tags: [strategies]
+      summary: Get a strategy by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Strategy details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Strategy"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateStrategy
+      tags: [strategies]
+      summary: Update a strategy
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StrategyUpdate"
+      responses:
+        "200":
+          description: Updated strategy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Strategy"
+    delete:
+      operationId: deleteStrategy
+      tags: [strategies]
+      summary: Delete a strategy
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /strategies/{id}/backtest:
+    get:
+      operationId: getStrategyBacktests
+      tags: [strategies]
+      summary: Get backtest results for a strategy
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Backtest results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BacktestResult"
+
+  # ── SIGNALS ──────────────────────────────────────────────────────────────────
+  /signals:
+    get:
+      operationId: listSignals
+      tags: [signals]
+      summary: List trading signals
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: symbol
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: List of signals
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Signal"
+    post:
+      operationId: createSignal
+      tags: [signals]
+      summary: Create a new signal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignalInput"
+      responses:
+        "201":
+          description: Signal created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Signal"
+
+  # ── TRADES ───────────────────────────────────────────────────────────────────
+  /trades:
+    get:
+      operationId: listTrades
+      tags: [trades]
+      summary: List all trades
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: symbol
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: List of trades
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Trade"
+    post:
+      operationId: createTrade
+      tags: [trades]
+      summary: Create / record a trade
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TradeInput"
+      responses:
+        "201":
+          description: Trade created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Trade"
+
+  /trades/{id}:
+    get:
+      operationId: getTrade
+      tags: [trades]
+      summary: Get trade by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Trade details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Trade"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateTrade
+      tags: [trades]
+      summary: Update a trade (close, adjust stops, etc.)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TradeUpdate"
+      responses:
+        "200":
+          description: Updated trade
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Trade"
+    delete:
+      operationId: deleteTrade
+      tags: [trades]
+      summary: Delete a trade record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /trades/{id}/reasons:
+    get:
+      operationId: getTradeReasons
+      tags: [trades]
+      summary: Get reasons recorded for a trade
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Trade reasons
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TradeReason"
+
+  # ── ANALYTICS ────────────────────────────────────────────────────────────────
+  /analytics/performance:
+    get:
+      operationId: getPerformance
+      tags: [analytics]
+      summary: Get overall performance metrics
+      responses:
+        "200":
+          description: Performance summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PerformanceSummary"
+
+  /analytics/daily:
+    get:
+      operationId: getDailyPerformance
+      tags: [analytics]
+      summary: Get daily P&L history
+      parameters:
+        - name: days
+          in: query
+          schema:
+            type: integer
+            default: 30
+      responses:
+        "200":
+          description: Daily performance records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DailyPerformance"
+
+  /analytics/strategy-comparison:
+    get:
+      operationId: getStrategyComparison
+      tags: [analytics]
+      summary: Compare strategy performance
+      responses:
+        "200":
+          description: Strategy performance comparison
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StrategyPerf"
+
+  # ── DASHBOARD SUMMARY ─────────────────────────────────────────────────────────
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get aggregated dashboard data
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /dashboard/recent-activity:
+    get:
+      operationId: getRecentActivity
+      tags: [dashboard]
+      summary: Get recent system activity feed
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Recent activity events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityEvent"
+
+  # ── BACKTESTS ─────────────────────────────────────────────────────────────────
+  /backtests:
+    get:
+      operationId: listBacktests
+      tags: [backtests]
+      summary: List all backtest results
+      responses:
+        "200":
+          description: List of backtest results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BacktestResult"
+    post:
+      operationId: createBacktest
+      tags: [backtests]
+      summary: Run a new backtest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BacktestInput"
+      responses:
+        "201":
+          description: Backtest result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BacktestResult"
+
+  # ── SYSTEM ────────────────────────────────────────────────────────────────────
+  /system/status:
+    get:
+      operationId: getSystemStatus
+      tags: [system]
+      summary: Get system health and service status
+      responses:
+        "200":
+          description: System status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemStatus"
+
+  /system/logs:
+    get:
+      operationId: getSystemLogs
+      tags: [system]
+      summary: Get recent system logs
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: service
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: System logs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SystemLog"
+
 components:
   schemas:
     HealthStatus:
@@ -31,6 +555,505 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    # ── MARKET ──────────────────────────────────────────────────────────────────
+    MarketPrice:
+      type: object
+      required: [symbol, price, change24h, changePercent24h, volume24h, high24h, low24h, updatedAt]
+      properties:
+        symbol:
+          type: string
+        name:
+          type: string
+        price:
+          type: number
+        change24h:
+          type: number
+        changePercent24h:
+          type: number
+        volume24h:
+          type: number
+        high24h:
+          type: number
+        low24h:
+          type: number
+        marketCap:
+          type: ["number", "null"]
+        updatedAt:
+          type: string
+
+    Candle:
+      type: object
+      required: [id, symbol, timeframe, open, high, low, close, volume, timestamp]
+      properties:
+        id:
+          type: integer
+        symbol:
+          type: string
+        timeframe:
+          type: string
+        open:
+          type: number
+        high:
+          type: number
+        low:
+          type: number
+        close:
+          type: number
+        volume:
+          type: number
+        timestamp:
+          type: string
+
+    Indicators:
+      type: object
+      required: [symbol, timeframe]
+      properties:
+        symbol:
+          type: string
+        timeframe:
+          type: string
+        ema20:
+          type: ["number", "null"]
+        ema50:
+          type: ["number", "null"]
+        ema200:
+          type: ["number", "null"]
+        rsi:
+          type: ["number", "null"]
+        macd:
+          type: ["number", "null"]
+        macdSignal:
+          type: ["number", "null"]
+        atr:
+          type: ["number", "null"]
+        vwap:
+          type: ["number", "null"]
+        bollingerUpper:
+          type: ["number", "null"]
+        bollingerLower:
+          type: ["number", "null"]
+        adx:
+          type: ["number", "null"]
+        updatedAt:
+          type: string
+
+    # ── STRATEGIES ──────────────────────────────────────────────────────────────
+    Strategy:
+      type: object
+      required: [id, name, version, active, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        version:
+          type: integer
+        description:
+          type: ["string", "null"]
+        rulesJson:
+          type: ["string", "null"]
+        active:
+          type: boolean
+        winRate:
+          type: ["number", "null"]
+        totalTrades:
+          type: ["integer", "null"]
+        profitFactor:
+          type: ["number", "null"]
+        createdAt:
+          type: string
+
+    StrategyInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        rulesJson:
+          type: string
+        active:
+          type: boolean
+
+    StrategyUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        rulesJson:
+          type: string
+        active:
+          type: boolean
+
+    # ── SIGNALS ─────────────────────────────────────────────────────────────────
+    Signal:
+      type: object
+      required: [id, symbol, signalType, confidence, createdAt]
+      properties:
+        id:
+          type: integer
+        symbol:
+          type: string
+        strategyId:
+          type: ["integer", "null"]
+        strategyName:
+          type: ["string", "null"]
+        signalType:
+          type: string
+          enum: [buy, sell, hold]
+        confidence:
+          type: number
+        reason:
+          type: ["string", "null"]
+        status:
+          type: string
+        createdAt:
+          type: string
+
+    SignalInput:
+      type: object
+      required: [symbol, signalType, confidence]
+      properties:
+        symbol:
+          type: string
+        strategyId:
+          type: integer
+        signalType:
+          type: string
+          enum: [buy, sell, hold]
+        confidence:
+          type: number
+        reason:
+          type: string
+
+    # ── TRADES ──────────────────────────────────────────────────────────────────
+    Trade:
+      type: object
+      required: [id, symbol, side, entryPrice, quantity, status, createdAt]
+      properties:
+        id:
+          type: integer
+        symbol:
+          type: string
+        strategyId:
+          type: ["integer", "null"]
+        strategyName:
+          type: ["string", "null"]
+        side:
+          type: string
+          enum: [long, short]
+        entryPrice:
+          type: number
+        exitPrice:
+          type: ["number", "null"]
+        quantity:
+          type: number
+        stopLoss:
+          type: ["number", "null"]
+        takeProfit:
+          type: ["number", "null"]
+        profitLoss:
+          type: ["number", "null"]
+        profitPercent:
+          type: ["number", "null"]
+        status:
+          type: string
+          enum: [open, closed, cancelled]
+        aiConfidence:
+          type: ["number", "null"]
+        timeframe:
+          type: ["string", "null"]
+        entryTime:
+          type: string
+        exitTime:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    TradeInput:
+      type: object
+      required: [symbol, side, entryPrice, quantity]
+      properties:
+        symbol:
+          type: string
+        strategyId:
+          type: integer
+        side:
+          type: string
+          enum: [long, short]
+        entryPrice:
+          type: number
+        quantity:
+          type: number
+        stopLoss:
+          type: number
+        takeProfit:
+          type: number
+        aiConfidence:
+          type: number
+        timeframe:
+          type: string
+        reasons:
+          type: array
+          items:
+            type: object
+            properties:
+              reasonType:
+                type: string
+              reasonText:
+                type: string
+
+    TradeUpdate:
+      type: object
+      properties:
+        exitPrice:
+          type: number
+        stopLoss:
+          type: number
+        takeProfit:
+          type: number
+        status:
+          type: string
+          enum: [open, closed, cancelled]
+        exitTime:
+          type: string
+
+    TradeReason:
+      type: object
+      required: [id, tradeId, reasonType, reasonText]
+      properties:
+        id:
+          type: integer
+        tradeId:
+          type: integer
+        reasonType:
+          type: string
+        reasonText:
+          type: string
+
+    # ── ANALYTICS ───────────────────────────────────────────────────────────────
+    PerformanceSummary:
+      type: object
+      required: [totalTrades, openTrades, closedTrades, wins, losses, winRate, totalPnl, avgWin, avgLoss, profitFactor, maxDrawdown, sharpeRatio]
+      properties:
+        totalTrades:
+          type: integer
+        openTrades:
+          type: integer
+        closedTrades:
+          type: integer
+        wins:
+          type: integer
+        losses:
+          type: integer
+        winRate:
+          type: number
+        totalPnl:
+          type: number
+        avgWin:
+          type: number
+        avgLoss:
+          type: number
+        profitFactor:
+          type: number
+        maxDrawdown:
+          type: number
+        sharpeRatio:
+          type: number
+        expectancy:
+          type: number
+
+    DailyPerformance:
+      type: object
+      required: [date, pnl, trades, wins, losses, winRate, cumulativePnl]
+      properties:
+        date:
+          type: string
+        pnl:
+          type: number
+        trades:
+          type: integer
+        wins:
+          type: integer
+        losses:
+          type: integer
+        winRate:
+          type: number
+        cumulativePnl:
+          type: number
+        drawdown:
+          type: number
+
+    StrategyPerf:
+      type: object
+      required: [strategyId, strategyName, totalTrades, winRate, totalPnl, profitFactor]
+      properties:
+        strategyId:
+          type: integer
+        strategyName:
+          type: string
+        totalTrades:
+          type: integer
+        winRate:
+          type: number
+        totalPnl:
+          type: number
+        avgPnl:
+          type: number
+        profitFactor:
+          type: number
+        maxDrawdown:
+          type: number
+
+    # ── DASHBOARD ───────────────────────────────────────────────────────────────
+    DashboardSummary:
+      type: object
+      required: [openTrades, totalPnlToday, winRateAllTime, activeStrategies, totalSignalsToday, systemHealth, accountBalance, unrealizedPnl]
+      properties:
+        openTrades:
+          type: integer
+        totalPnlToday:
+          type: number
+        winRateAllTime:
+          type: number
+        activeStrategies:
+          type: integer
+        totalSignalsToday:
+          type: integer
+        systemHealth:
+          type: string
+        accountBalance:
+          type: number
+        unrealizedPnl:
+          type: number
+        totalClosedTrades:
+          type: integer
+        bestTrade:
+          type: ["number", "null"]
+        worstTrade:
+          type: ["number", "null"]
+
+    ActivityEvent:
+      type: object
+      required: [id, type, title, description, timestamp]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          enum: [trade_opened, trade_closed, signal_generated, backtest_complete, strategy_created, system_alert]
+        title:
+          type: string
+        description:
+          type: string
+        symbol:
+          type: ["string", "null"]
+        value:
+          type: ["number", "null"]
+        timestamp:
+          type: string
+
+    # ── BACKTESTS ───────────────────────────────────────────────────────────────
+    BacktestResult:
+      type: object
+      required: [id, strategyId, startDate, endDate, totalTrades, wins, losses, winRate, profitFactor, drawdown, createdAt]
+      properties:
+        id:
+          type: integer
+        strategyId:
+          type: integer
+        strategyName:
+          type: ["string", "null"]
+        startDate:
+          type: string
+        endDate:
+          type: string
+        totalTrades:
+          type: integer
+        wins:
+          type: integer
+        losses:
+          type: integer
+        winRate:
+          type: number
+        profitFactor:
+          type: number
+        drawdown:
+          type: number
+        sharpeRatio:
+          type: ["number", "null"]
+        totalReturn:
+          type: ["number", "null"]
+        createdAt:
+          type: string
+
+    BacktestInput:
+      type: object
+      required: [strategyId, startDate, endDate]
+      properties:
+        strategyId:
+          type: integer
+        startDate:
+          type: string
+        endDate:
+          type: string
+        symbol:
+          type: string
+        timeframe:
+          type: string
+
+    # ── SYSTEM ──────────────────────────────────────────────────────────────────
+    SystemStatus:
+      type: object
+      required: [status, services, databaseConnected, uptime]
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, down]
+        services:
+          type: array
+          items:
+            $ref: "#/components/schemas/ServiceStatus"
+        databaseConnected:
+          type: boolean
+        uptime:
+          type: number
+        version:
+          type: string
+
+    ServiceStatus:
+      type: object
+      required: [name, status, lastChecked]
+      properties:
+        name:
+          type: string
+        status:
+          type: string
+          enum: [online, offline, degraded]
+        lastChecked:
+          type: string
+        latencyMs:
+          type: ["integer", "null"]
+
+    SystemLog:
+      type: object
+      required: [id, service, event, message, timestamp]
+      properties:
+        id:
+          type: integer
+        service:
+          type: string
+        event:
+          type: string
+        message:
+          type: string
+        level:
+          type: string
+          enum: [info, warn, error, debug]
+        timestamp:
+          type: string

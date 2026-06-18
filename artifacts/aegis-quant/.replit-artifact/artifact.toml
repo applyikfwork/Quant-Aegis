@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "AEGIS QUANT AI"
+version = "1.0.0"
+id = "artifacts/aegis-quant"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23855
+
+[services.development]
+run = "pnpm --filter @workspace/aegis-quant run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/aegis-quant", "run", "build" ]
+publicDir = "artifacts/aegis-quant/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23855"
+BASE_PATH = "/"
