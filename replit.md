@@ -81,3 +81,15 @@ _Populate as you build — explicit user instructions worth remembering across s
 - See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
 - Blueprint v2 database architecture is fully implemented in `lib/db/src/schema/`
 - Blueprint v3 (FastAPI backend) was adapted to Node.js/Express to fit the Replit monorepo stack
+
+## Blueprint Documentation
+
+Full design docs live in `docs/`:
+
+| File | What it covers |
+|------|----------------|
+| `docs/BLUEPRINT_V1.md` | Product vision, all 8 pages, frontend design, UI principles |
+| `docs/BLUEPRINT_V2.md` | Database schema (all 9 tables), API routes (all 30+ endpoints), OpenAPI contract, architecture decisions |
+| `docs/BLUEPRINT_V3.md` | System engineering design, service breakdown (Market/Indicator/Strategy/Risk/AI/Learning), background workers, AI brain pipeline, security, deployment, full phase roadmap |
+
+Next blueprint to write: **V4 — AI Brain Architecture** (RAG, memory, learning, model system).

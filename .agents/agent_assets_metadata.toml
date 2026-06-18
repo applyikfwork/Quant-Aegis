@@ -1,0 +1,20 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "eBY0PjX3OCk2xh10CJ446"
+uri = "file://docs/BLUEPRINT_V1.md"
+type = "text"
+title = "Blueprint V1 — Product & Frontend Design"
+
+[[outputs]]
+id = "0mm-jLFTBV329H8NdAozc"
+uri = "file://docs/BLUEPRINT_V2.md"
+type = "text"
+title = "Blueprint V2 — Database & API Architecture"
+
+[[outputs]]
+id = "B5Y3tbhAm0CL_063XNUIG"
+uri = "file://docs/BLUEPRINT_V3.md"
+type = "text"
+title = "Blueprint V3 — System Engineering Design"
