@@ -10,6 +10,7 @@ import backtestsRouter from "./backtests";
 import systemRouter from "./system";
 import aiRouter from "./ai";
 import paperTradingRouter from "./paper-trading";
+import learningRouter from "./learning";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use(backtestsRouter);
 router.use(systemRouter);
 router.use(aiRouter);
 router.use(paperTradingRouter);
+router.use(learningRouter);
 
 export default router;
