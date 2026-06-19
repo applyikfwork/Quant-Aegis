@@ -1,9 +1,8 @@
 {
   "version": 2,
   "buildCommand": "pnpm --filter @workspace/aegis-quant run build",
-  "outputDirectory": "artifacts/aegis-quant/dist/public",
+  "outputDirectory": "public",
   "installCommand": "pnpm install --frozen-lockfile",
-  "framework": null,
   "rewrites": [
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],
@@ -18,8 +17,7 @@
       "source": "/(.*)",
       "headers": [
         { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "X-Frame-Options", "value": "DENY" },
-        { "key": "X-XSS-Protection", "value": "1; mode=block" }
+        { "key": "X-Frame-Options", "value": "DENY" }
       ]
     }
   ],

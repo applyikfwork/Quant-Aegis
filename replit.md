@@ -91,7 +91,7 @@ A professional AI-powered quantitative trading research platform for tracking cr
 
 ## Vercel + Render deployment
 
-- Frontend → Vercel: `buildCommand` is `pnpm --filter @workspace/aegis-quant run build`, `outputDirectory` is `artifacts/aegis-quant/dist/public`
+- Frontend → Vercel: `buildCommand` is `pnpm --filter @workspace/aegis-quant run build`, `outputDirectory` is `public` (vite outputs to repo-root `/public/`)
 - Backend → Render: Build `pnpm --filter @workspace/api-server run build`, Start `node artifacts/api-server/dist/index.mjs`; add SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, BYBIT_API_KEY, BYBIT_API_SECRET as env vars
 - **Critical**: In Vercel, add env var `VITE_API_BASE_URL = https://your-render-app.onrender.com/api` so the frontend can reach the Render backend
 - Sourcemap warnings in Vercel build log are non-fatal — build succeeds regardless
