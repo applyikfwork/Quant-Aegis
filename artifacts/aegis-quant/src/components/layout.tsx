@@ -96,7 +96,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </nav>
         </div>
 
-        <div className="p-4 border-t border-border shrink-0">
+        <div className="p-4 border-t border-border shrink-0 space-y-2">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>v0.3.0-alpha</span>
             <span className="flex items-center text-success">
@@ -104,6 +104,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
               Connected
             </span>
           </div>
+          <p className="text-[10px] text-muted-foreground/50 text-center leading-tight">
+            Developed by Jitender Prajapat
+          </p>
         </div>
       </div>
 
