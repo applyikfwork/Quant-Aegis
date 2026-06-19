@@ -1,0 +1,73 @@
+{
+  "id": "strategy_002",
+  "moduleFolder": "strategy_002_volatility_breakout_engine",
+  "name": "Volatility Breakout Intelligence Engine",
+  "shortName": "VBIE",
+  "version": "1.0.0",
+  "category": "Breakout",
+  "subcategory": "Volatility Expansion",
+  "description": "Captures explosive breakout moves using Bollinger Band compression/expansion with ATR volatility confirmation and AI regime detection. Designed for news events, momentum breakouts, and volatility expansion periods.",
+  "author": "AEGIS QUANT AI",
+  "createdAt": "2026-06-19",
+  "tags": ["breakout", "volatility", "bollinger", "atr", "ai-enhanced", "momentum"],
+  "supportedAssets": ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "AVAXUSDT"],
+  "supportedTimeframes": ["15m", "1h", "4h"],
+  "primaryTimeframe": "1h",
+  "bestMarketConditions": ["Volatility Expansion", "News Breakouts", "Range Compression Release", "High Volume Events"],
+  "avoidConditions": ["Low Volume", "Extreme Overextension", "Known Manipulation Zones"],
+  "complexity": "Advanced",
+  "estimatedWinRate": 48,
+  "estimatedRR": 4.0,
+  "estimatedSharpe": 1.6,
+  "minAccountSize": 1000,
+  "connections": ["AI Center", "Risk Center", "Analytics", "Portfolio", "Research Lab", "Paper Trading"],
+  "scoreSystem": {
+    "maxScore": 100,
+    "threshold": 75,
+    "layers": [
+      { "name": "Breakout Strength", "indicator": "Bollinger Bands (20,2)", "maxPoints": 30, "description": "Price closes outside Bollinger Band" },
+      { "name": "Volume Spike", "indicator": "Volume / Volume MA", "maxPoints": 25, "description": "Volume > 1.5x average" },
+      { "name": "Volatility Expansion", "indicator": "ATR 14", "maxPoints": 20, "description": "ATR increasing vs recent average" },
+      { "name": "AI Regime", "indicator": "AI Confidence", "maxPoints": 25, "description": "AI confidence >= 75%" }
+    ]
+  },
+  "indicators": [
+    { "name": "Bollinger Bands (20,2)", "period": 20, "stdDev": 2, "type": "BollingerBands", "layer": "Breakout", "weight": 30, "description": "Band compression before breakout, expansion after" },
+    { "name": "ATR 14", "period": 14, "type": "ATR", "layer": "Volatility", "weight": 20, "description": "Volatility measurement and position sizing" },
+    { "name": "Volume MA (20)", "period": 20, "type": "VolumeMA", "layer": "Volume", "weight": 25, "description": "Volume spike detection" },
+    { "name": "BB Width", "period": 20, "type": "BBWidth", "layer": "Compression", "weight": 0, "description": "Bollinger band width squeeze detector" }
+  ],
+  "entryRules": {
+    "long": [
+      "Price closes above Bollinger upper band",
+      "Volume >= 1.5x 20-period average",
+      "ATR is increasing (expanding volatility)",
+      "AI confidence >= 75%",
+      "Wait 1 candle close confirmation (anti-fake-breakout)"
+    ],
+    "short": [
+      "Price closes below Bollinger lower band",
+      "Volume >= 1.5x 20-period average",
+      "ATR is increasing (expanding volatility)",
+      "AI confidence >= 75%",
+      "Wait 1 candle close confirmation"
+    ]
+  },
+  "exitRules": {
+    "takeProfit": "ATR × 4.0 from entry",
+    "stopLoss": "ATR × 1.5 from entry",
+    "trailingStop": true,
+    "trailingActivation": "After 1.5x ATR profit",
+    "trailingDistance": "ATR × 1.0"
+  },
+  "riskRules": {
+    "riskPerTrade": 1.5,
+    "maxPositions": 3,
+    "maxDrawdown": 20,
+    "dailyLossLimit": 4,
+    "positionSizing": "ATR-dynamic fractional"
+  },
+  "dbTable": "strategies",
+  "signalDbTable": "signals",
+  "performanceDbTable": "backtests"
+}

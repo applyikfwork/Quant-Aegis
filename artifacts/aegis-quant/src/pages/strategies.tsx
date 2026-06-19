@@ -30,8 +30,9 @@ import {
   CheckCircle2, XCircle, Play, Pause, Trash2, Plus, Edit3,
   ChevronRight, Cpu, BarChart2, FlaskConical, LineChart,
   BookOpen, Rocket, RefreshCw, AlertTriangle, Eye,
-  GitBranch, Layers, Shield, Star, Clock,
+  GitBranch, Layers, Shield, Star, Clock, Package, Settings, Network,
 } from "lucide-react";
+import { STRATEGY_REGISTRY, type StrategyModuleDef } from "@/lib/strategy-registry";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function StatCard({ title, value, sub, icon: Icon, color, loading, trend }: {
@@ -234,6 +235,11 @@ export default function Strategies() {
   const [monitorLoading, setMonitorLoading] = useState(false);
   const [dashData, setDashData] = useState<any>(null);
   const [dashLoaded, setDashLoaded] = useState(false);
+  const [selectedModule, setSelectedModule] = useState<StrategyModuleDef | null>(null);
+  const [moduleDetailTab, setModuleDetailTab] = useState("overview");
+  const [moduleEvalResult, setModuleEvalResult] = useState<any>(null);
+  const [moduleEvalLoading, setModuleEvalLoading] = useState(false);
+  const [moduleEvalAsset, setModuleEvalAsset] = useState("BTCUSDT");
 
   const { data: strategies, isLoading, refetch } = useListStrategies();
   const { data: comparison, isLoading: compLoading } = useGetStrategyComparison();
@@ -251,6 +257,19 @@ export default function Strategies() {
   const { mutate: createStrategy, isPending: creating } = useCreateStrategy();
   const { mutate: updateStrategy, isPending: updating } = useUpdateStrategy();
   const { mutate: deleteStrategy } = useDeleteStrategy();
+
+  const runModuleEval = async (strategyId: string) => {
+    setModuleEvalLoading(true);
+    setModuleEvalResult(null);
+    try {
+      const r = await fetch("/api/strategies/engine/evaluate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ strategyId, asset: moduleEvalAsset, timeframe: "1h", aiConfidence: 72, aiSentiment: "Bullish" }),
+      });
+      setModuleEvalResult(await r.json());
+    } catch { } finally { setModuleEvalLoading(false); }
+  };
 
   const fetchDash = async () => {
     try {
@@ -366,6 +385,7 @@ export default function Strategies() {
             { id: "ai-builder", label: "AI Builder", icon: Brain },
             { id: "comparison", label: "Comparison", icon: BarChart2 },
             { id: "lifecycle", label: "Lifecycle", icon: GitBranch },
+            { id: "engine", label: "Strategy Engine", icon: Package },
           ].map(({ id, label, icon: Icon }) => (
             <TabsTrigger key={id} value={id} className="flex items-center gap-1.5 text-xs px-3 py-1.5">
               <Icon className="w-3.5 h-3.5" />
@@ -1213,6 +1233,477 @@ export default function Strategies() {
               <p className="text-xs text-muted-foreground mt-3">Version auto-increments on each PATCH. Compare versions to see parameter drift over time.</p>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* ── ENGINE ── */}
+        <TabsContent value="engine" className="space-y-6 mt-4">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-bold flex items-center gap-2">
+                <Package className="w-5 h-5 text-primary" />
+                Strategy Engine — {STRATEGY_REGISTRY.length} Independent Modules
+              </h2>
+              <p className="text-sm text-muted-foreground mt-0.5">Each strategy is a self-contained module with its own scoring system, risk rules, and live evaluation engine</p>
+            </div>
+            <Badge className="bg-primary/10 text-primary border-primary/20">
+              <Cpu className="w-3 h-3 mr-1" />v1.0
+            </Badge>
+          </div>
+
+          {/* Module Cards Grid */}
+          <div className="grid gap-4 md:grid-cols-2">
+            {STRATEGY_REGISTRY.map(mod => {
+              const isSelected = selectedModule?.id === mod.id;
+              const layerColors: Record<string, string> = { blue: "bg-blue-500", purple: "bg-purple-500" };
+              const cardBorder = mod.color === "blue" ? "border-blue-500/30" : "border-purple-500/30";
+              const badgeBg = mod.color === "blue" ? "bg-blue-500/10 text-blue-400 border-blue-500/20" : "bg-purple-500/10 text-purple-400 border-purple-500/20";
+              return (
+                <Card
+                  key={mod.id}
+                  onClick={() => { setSelectedModule(mod); setModuleDetailTab("overview"); setModuleEvalResult(null); }}
+                  className={cn("cursor-pointer transition-all hover:shadow-md hover:border-primary/40", isSelected ? "border-primary bg-primary/5 shadow-sm" : cardBorder)}
+                >
+                  <CardContent className="pt-4 pb-4">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", mod.color === "blue" ? "bg-blue-500/15" : "bg-purple-500/15")}>
+                          {mod.icon === "TrendingUp" ? <TrendingUp className={cn("w-4 h-4", mod.color === "blue" ? "text-blue-400" : "text-purple-400")} /> : <Zap className={cn("w-4 h-4", mod.color === "blue" ? "text-blue-400" : "text-purple-400")} />}
+                        </div>
+                        <div>
+                          <p className="font-bold text-sm leading-tight">{mod.shortName}</p>
+                          <p className="text-xs text-muted-foreground">{mod.id.replace("_", " ").toUpperCase()}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Badge variant="outline" className={cn("text-xs font-medium", badgeBg)}>{mod.category}</Badge>
+                        {isSelected && <CheckCircle2 className="w-4 h-4 text-primary" />}
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-muted-foreground mb-3 line-clamp-2">{mod.description}</p>
+
+                    {/* Score system preview */}
+                    <div className="space-y-1.5 mb-3">
+                      {mod.scoreSystem.layers.map(layer => {
+                        const pct = (layer.maxPoints / mod.scoreSystem.maxScore) * 100;
+                        return (
+                          <div key={layer.name} className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground w-20 shrink-0">{layer.name}</span>
+                            <div className="flex-1 h-1.5 rounded-full bg-muted/30">
+                              <div className={cn("h-full rounded-full", mod.color === "blue" ? "bg-blue-500/70" : "bg-purple-500/70")} style={{ width: `${pct}%` }} />
+                            </div>
+                            <span className="text-xs text-muted-foreground w-8 text-right">{layer.maxPoints}pt</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Stats row */}
+                    <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border">
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground">Win Rate</p>
+                        <p className="text-sm font-bold">{mod.estimatedWinRate}%</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground">R:R Ratio</p>
+                        <p className="text-sm font-bold">1:{mod.estimatedRR}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground">Threshold</p>
+                        <p className="text-sm font-bold">{mod.scoreSystem.threshold}/100</p>
+                      </div>
+                    </div>
+
+                    {/* Connections */}
+                    <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-border">
+                      {mod.connections.slice(0, 4).map(c => (
+                        <span key={c} className="text-xs bg-muted/30 px-1.5 py-0.5 rounded text-muted-foreground">{c}</span>
+                      ))}
+                      {mod.connections.length > 4 && <span className="text-xs text-muted-foreground">+{mod.connections.length - 4} more</span>}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+
+          {/* Module Detail Panel */}
+          {selectedModule ? (
+            <Card className="border-border">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between flex-wrap gap-3">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      {selectedModule.icon === "TrendingUp" ? <TrendingUp className="w-5 h-5 text-blue-400" /> : <Zap className="w-5 h-5 text-purple-400" />}
+                      {selectedModule.name}
+                    </CardTitle>
+                    <CardDescription className="mt-1">{selectedModule.subcategory} · v{selectedModule.version} · {selectedModule.complexity} complexity</CardDescription>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant="outline" className={cn("text-xs", selectedModule.color === "blue" ? "bg-blue-500/10 text-blue-400 border-blue-500/20" : "bg-purple-500/10 text-purple-400 border-purple-500/20")}>{selectedModule.category}</Badge>
+                    <Badge variant="outline" className="text-xs bg-muted/20">min ${selectedModule.minAccountSize.toLocaleString()}</Badge>
+                    <Badge variant="outline" className="text-xs bg-muted/20">{selectedModule.primaryTimeframe} primary</Badge>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Tabs value={moduleDetailTab} onValueChange={setModuleDetailTab}>
+                  <TabsList className="h-8 mb-4">
+                    {[
+                      { id: "overview", label: "Overview", icon: Eye },
+                      { id: "score", label: "Score System", icon: Target },
+                      { id: "rules", label: "Entry / Exit", icon: GitBranch },
+                      { id: "risk", label: "Risk Rules", icon: Shield },
+                      { id: "evaluate", label: "Evaluate", icon: Play },
+                    ].map(({ id, label, icon: Icon }) => (
+                      <TabsTrigger key={id} value={id} className="text-xs px-3">
+                        <Icon className="w-3 h-3 mr-1" />{label}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+
+                  {/* OVERVIEW */}
+                  <TabsContent value="overview" className="space-y-4">
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                      {[
+                        { label: "Est. Win Rate", value: `${selectedModule.estimatedWinRate}%`, sub: "Historical" },
+                        { label: "Risk:Reward", value: `1:${selectedModule.estimatedRR}`, sub: "Per trade" },
+                        { label: "Sharpe Ratio", value: selectedModule.estimatedSharpe.toFixed(1), sub: "Estimated" },
+                        { label: "Score Threshold", value: `${selectedModule.scoreSystem.threshold}/100`, sub: "Min to trade" },
+                      ].map(({ label, value, sub }) => (
+                        <div key={label} className="p-3 rounded-lg border border-border bg-muted/10 text-center">
+                          <p className="text-xs text-muted-foreground mb-1">{label}</p>
+                          <p className="text-xl font-bold">{value}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <p className="text-sm font-semibold mb-2 flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-success" />Best Conditions</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {selectedModule.bestMarketConditions.map(c => (
+                            <span key={c} className="text-xs bg-success/10 text-success border border-success/20 px-2 py-0.5 rounded-full">{c}</span>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold mb-2 flex items-center gap-1.5"><XCircle className="w-4 h-4 text-destructive" />Avoid Conditions</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {selectedModule.avoidConditions.map(c => (
+                            <span key={c} className="text-xs bg-destructive/10 text-destructive border border-destructive/20 px-2 py-0.5 rounded-full">{c}</span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-semibold mb-2 flex items-center gap-1.5"><Network className="w-4 h-4 text-primary" />Module Connections</p>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedModule.connections.map(c => (
+                          <div key={c} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-border bg-muted/10 text-xs font-medium">
+                            <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                            {c}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-semibold mb-2">Indicators</p>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        {selectedModule.indicators.map(ind => (
+                          <div key={ind.name} className="flex items-center justify-between p-2 rounded-lg border border-border bg-muted/5">
+                            <div>
+                              <p className="text-xs font-semibold">{ind.name}</p>
+                              <p className="text-xs text-muted-foreground">{ind.description}</p>
+                            </div>
+                            <div className="text-right shrink-0 ml-2">
+                              <span className="text-xs bg-muted/30 px-1.5 py-0.5 rounded text-muted-foreground">{ind.layer}</span>
+                              {ind.weight > 0 && <span className="ml-1 text-xs font-bold text-primary">{ind.weight}pt</span>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-semibold mb-2">Supported Assets & Timeframes</p>
+                      <div className="flex flex-wrap gap-1.5 mb-2">
+                        {selectedModule.supportedAssets.map(a => (
+                          <span key={a} className={cn("text-xs px-2 py-0.5 rounded border font-mono", a === selectedModule.supportedAssets[0] ? "bg-primary/10 text-primary border-primary/20" : "bg-muted/20 text-muted-foreground border-border")}>{a}</span>
+                        ))}
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedModule.supportedTimeframes.map(t => (
+                          <span key={t} className={cn("text-xs px-2 py-0.5 rounded border font-mono", t === selectedModule.primaryTimeframe ? "bg-primary/10 text-primary border-primary/20" : "bg-muted/20 text-muted-foreground border-border")}>{t === selectedModule.primaryTimeframe ? `${t} (primary)` : t}</span>
+                        ))}
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  {/* SCORE SYSTEM */}
+                  <TabsContent value="score" className="space-y-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <p className="text-sm font-bold">5-Layer Scoring System</p>
+                        <p className="text-xs text-muted-foreground">Trade executes only when total score ≥ {selectedModule.scoreSystem.threshold}/100</p>
+                      </div>
+                      <div className="text-center p-2 rounded-lg border border-border bg-muted/10">
+                        <p className="text-2xl font-black text-primary">{selectedModule.scoreSystem.threshold}</p>
+                        <p className="text-xs text-muted-foreground">threshold</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      {selectedModule.scoreSystem.layers.map((layer, idx) => {
+                        const pct = (layer.maxPoints / selectedModule.scoreSystem.maxScore) * 100;
+                        const colors = ["bg-blue-500", "bg-indigo-500", "bg-violet-500", "bg-cyan-500", "bg-emerald-500"];
+                        const textColors = ["text-blue-400", "text-indigo-400", "text-violet-400", "text-cyan-400", "text-emerald-400"];
+                        return (
+                          <div key={layer.name} className="p-3 rounded-lg border border-border bg-muted/5">
+                            <div className="flex items-center justify-between mb-2">
+                              <div>
+                                <span className="text-xs font-mono text-muted-foreground mr-2">Layer {idx + 1}</span>
+                                <span className="text-sm font-semibold">{layer.name}</span>
+                                <span className="ml-2 text-xs text-muted-foreground">— {layer.indicator}</span>
+                              </div>
+                              <span className={cn("text-sm font-black", textColors[idx % textColors.length])}>{layer.maxPoints}pts</span>
+                            </div>
+                            <div className="w-full h-3 rounded-full bg-muted/30">
+                              <div className={cn("h-full rounded-full transition-all", colors[idx % colors.length])} style={{ width: `${pct}%` }} />
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1.5">{layer.description}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="p-3 rounded-lg border border-primary/20 bg-primary/5">
+                      <p className="text-sm font-semibold mb-1">Score Interpretation</p>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          { range: `0–${selectedModule.scoreSystem.threshold - 1}`, label: "No Trade", color: "text-muted-foreground" },
+                          { range: `${selectedModule.scoreSystem.threshold}–84`, label: "Valid Entry", color: "text-yellow-400" },
+                          { range: "85–100", label: "High Confidence", color: "text-success" },
+                        ].map(({ range, label, color }) => (
+                          <div key={range} className="text-center">
+                            <p className={cn("text-sm font-bold", color)}>{range}</p>
+                            <p className="text-xs text-muted-foreground">{label}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-semibold mb-2">Tags</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedModule.tags.map(t => (
+                          <span key={t} className="text-xs bg-muted/20 border border-border px-2 py-0.5 rounded-full text-muted-foreground">#{t}</span>
+                        ))}
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  {/* RULES */}
+                  <TabsContent value="rules" className="space-y-4">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <p className="text-sm font-semibold text-success mb-2 flex items-center gap-1.5">
+                          <TrendingUp className="w-4 h-4" />LONG Entry Rules
+                        </p>
+                        <div className="space-y-1.5">
+                          {selectedModule.entryRules.long.map((rule, i) => (
+                            <div key={i} className="flex items-start gap-2 p-2.5 rounded-lg bg-success/5 border border-success/15">
+                              <span className="text-xs font-bold text-success mt-0.5 shrink-0">{i + 1}</span>
+                              <p className="text-xs">{rule}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-destructive mb-2 flex items-center gap-1.5">
+                          <TrendingUp className="w-4 h-4 rotate-180" />SHORT Entry Rules
+                        </p>
+                        <div className="space-y-1.5">
+                          {selectedModule.entryRules.short.map((rule, i) => (
+                            <div key={i} className="flex items-start gap-2 p-2.5 rounded-lg bg-destructive/5 border border-destructive/15">
+                              <span className="text-xs font-bold text-destructive mt-0.5 shrink-0">{i + 1}</span>
+                              <p className="text-xs">{rule}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    <div>
+                      <p className="text-sm font-semibold mb-3 flex items-center gap-1.5"><Target className="w-4 h-4 text-primary" />Exit Rules</p>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        {[
+                          { label: "Take Profit", value: selectedModule.exitRules.takeProfit, color: "text-success", bgColor: "bg-success/5 border-success/20" },
+                          { label: "Stop Loss", value: selectedModule.exitRules.stopLoss, color: "text-destructive", bgColor: "bg-destructive/5 border-destructive/20" },
+                          ...(selectedModule.exitRules.trailingStop ? [{ label: "Trailing Stop", value: "Enabled", color: "text-yellow-400", bgColor: "bg-yellow-500/5 border-yellow-500/20" }] : []),
+                          ...(selectedModule.exitRules.trailingActivation ? [{ label: "Trail Activation", value: selectedModule.exitRules.trailingActivation, color: "text-yellow-400", bgColor: "bg-yellow-500/5 border-yellow-500/20" }] : []),
+                          ...(selectedModule.exitRules.trailingDistance ? [{ label: "Trail Distance", value: selectedModule.exitRules.trailingDistance, color: "text-orange-400", bgColor: "bg-orange-500/5 border-orange-500/20" }] : []),
+                        ].map(({ label, value, color, bgColor }) => (
+                          <div key={label} className={cn("p-2.5 rounded-lg border", bgColor)}>
+                            <p className="text-xs text-muted-foreground">{label}</p>
+                            <p className={cn("text-sm font-semibold mt-0.5", color)}>{value}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  {/* RISK */}
+                  <TabsContent value="risk" className="space-y-4">
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      {[
+                        { label: "Risk Per Trade", value: `${selectedModule.riskRules.riskPerTrade}%`, sub: "of account balance", color: "text-primary" },
+                        { label: "Max Positions", value: selectedModule.riskRules.maxPositions.toString(), sub: "simultaneous trades", color: "text-primary" },
+                        { label: "Max Drawdown", value: `${selectedModule.riskRules.maxDrawdown}%`, sub: "auto-pause level", color: "text-yellow-400" },
+                        { label: "Daily Loss Limit", value: `${selectedModule.riskRules.dailyLossLimit}%`, sub: "session halt", color: "text-destructive" },
+                        { label: "Position Sizing", value: selectedModule.riskRules.positionSizing.split(" ")[0], sub: selectedModule.riskRules.positionSizing.split(" ").slice(1).join(" "), color: "text-foreground" },
+                        { label: "Complexity", value: selectedModule.complexity, sub: "strategy level", color: "text-muted-foreground" },
+                      ].map(({ label, value, sub, color }) => (
+                        <div key={label} className="p-3 rounded-lg border border-border bg-muted/5">
+                          <p className="text-xs text-muted-foreground mb-1">{label}</p>
+                          <p className={cn("text-lg font-bold", color)}>{value}</p>
+                          <p className="text-xs text-muted-foreground">{sub}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-semibold mb-2 flex items-center gap-1.5"><Shield className="w-4 h-4 text-primary" />Risk Rules</p>
+                      <div className="space-y-1.5">
+                        {selectedModule.riskRulesList.map((rule, i) => (
+                          <div key={i} className="flex items-start gap-2 p-2.5 rounded-lg border border-border bg-muted/5">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
+                            <p className="text-xs">{rule}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  {/* EVALUATE */}
+                  <TabsContent value="evaluate" className="space-y-4">
+                    <div className="flex items-start justify-between flex-wrap gap-3">
+                      <div>
+                        <p className="text-sm font-semibold">Live Strategy Evaluation</p>
+                        <p className="text-xs text-muted-foreground">Fetches real Bybit candles and runs the full scoring engine</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={moduleEvalAsset}
+                          onChange={e => setModuleEvalAsset(e.target.value)}
+                          className="text-xs px-2 py-1.5 rounded-md border border-border bg-background text-foreground"
+                        >
+                          {selectedModule.supportedAssets.map(a => (
+                            <option key={a} value={a}>{a}</option>
+                          ))}
+                        </select>
+                        <Button size="sm" onClick={() => runModuleEval(selectedModule.id)} disabled={moduleEvalLoading}>
+                          {moduleEvalLoading ? <RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Play className="w-3.5 h-3.5 mr-1.5" />}
+                          {moduleEvalLoading ? "Evaluating…" : "Run Evaluation"}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {!moduleEvalResult && !moduleEvalLoading && (
+                      <div className="rounded-lg border border-dashed border-border p-8 text-center">
+                        <Cpu className="w-10 h-10 mx-auto mb-3 text-muted-foreground opacity-30" />
+                        <p className="text-sm text-muted-foreground">Select an asset and click <strong>Run Evaluation</strong> to analyze live market conditions</p>
+                        <p className="text-xs text-muted-foreground mt-1">Uses {selectedModule.primaryTimeframe} candles from Bybit</p>
+                      </div>
+                    )}
+
+                    {moduleEvalResult && !moduleEvalResult.error && (
+                      <div className="space-y-4">
+                        {/* Result Header */}
+                        <div className={cn("p-4 rounded-xl border", moduleEvalResult.action === "BUY" ? "bg-success/8 border-success/30" : moduleEvalResult.action === "SELL" ? "bg-destructive/8 border-destructive/30" : "bg-muted/10 border-border")}>
+                          <div className="flex items-center justify-between flex-wrap gap-3">
+                            <div className="flex items-center gap-3">
+                              <div className={cn("text-2xl font-black px-4 py-2 rounded-lg", moduleEvalResult.action === "BUY" ? "bg-success/15 text-success" : moduleEvalResult.action === "SELL" ? "bg-destructive/15 text-destructive" : "bg-muted/20 text-muted-foreground")}>
+                                {moduleEvalResult.action}
+                              </div>
+                              <div>
+                                <p className="font-semibold">{moduleEvalResult.asset}</p>
+                                <p className="text-xs text-muted-foreground">{moduleEvalResult.timeframe} · AI: {moduleEvalResult.aiConfidence}% {moduleEvalResult.aiSentiment}</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-2xl font-black text-primary">{moduleEvalResult.totalScore}<span className="text-sm font-normal text-muted-foreground">/100</span></p>
+                              <p className="text-xs text-muted-foreground">Total Score {moduleEvalResult.passesThreshold ? "✓ Threshold met" : "✗ Below threshold"}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Score Breakdown */}
+                        <div>
+                          <p className="text-sm font-semibold mb-2">Score Breakdown</p>
+                          <div className="space-y-2">
+                            {(moduleEvalResult.breakdown ?? []).map((layer: any) => (
+                              <div key={layer.layer} className="p-2.5 rounded-lg border border-border bg-muted/5">
+                                <div className="flex items-center justify-between mb-1">
+                                  <div className="flex items-center gap-2">
+                                    {layer.passed ? <CheckCircle2 className="w-3.5 h-3.5 text-success" /> : <XCircle className="w-3.5 h-3.5 text-muted-foreground" />}
+                                    <span className="text-xs font-semibold">{layer.layer}</span>
+                                  </div>
+                                  <span className={cn("text-xs font-bold", layer.passed ? "text-success" : "text-muted-foreground")}>{layer.score}/{layer.maxScore}</span>
+                                </div>
+                                <div className="w-full h-1.5 rounded-full bg-muted/30 mb-1">
+                                  <div className={cn("h-full rounded-full", layer.passed ? "bg-success" : "bg-muted/40")} style={{ width: `${(layer.score / layer.maxScore) * 100}%` }} />
+                                </div>
+                                <p className="text-xs text-muted-foreground">{layer.reason}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Exit Levels */}
+                        {moduleEvalResult.exitLevels && (
+                          <div className="grid grid-cols-3 gap-2">
+                            <div className="p-2.5 rounded-lg border border-destructive/20 bg-destructive/5 text-center">
+                              <p className="text-xs text-muted-foreground">Stop Loss</p>
+                              <p className="text-sm font-bold text-destructive">${moduleEvalResult.exitLevels.stopLoss?.toLocaleString()}</p>
+                            </div>
+                            <div className="p-2.5 rounded-lg border border-border bg-muted/10 text-center">
+                              <p className="text-xs text-muted-foreground">Entry (Current)</p>
+                              <p className="text-sm font-bold">${moduleEvalResult.indicators?.currentPrice?.toLocaleString() ?? "—"}</p>
+                            </div>
+                            <div className="p-2.5 rounded-lg border border-success/20 bg-success/5 text-center">
+                              <p className="text-xs text-muted-foreground">Take Profit</p>
+                              <p className="text-sm font-bold text-success">${moduleEvalResult.exitLevels.takeProfit?.toLocaleString()}</p>
+                            </div>
+                          </div>
+                        )}
+
+                        <p className="text-xs text-muted-foreground text-center">Evaluated at {new Date(moduleEvalResult.timestamp).toLocaleTimeString()} · {moduleEvalResult.strategyName}</p>
+                      </div>
+                    )}
+
+                    {moduleEvalResult?.error && (
+                      <div className="p-4 rounded-lg border border-destructive/30 bg-destructive/5 flex items-center gap-2 text-destructive text-sm">
+                        <AlertTriangle className="w-4 h-4 shrink-0" />{moduleEvalResult.error}
+                      </div>
+                    )}
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="rounded-xl border border-dashed border-border p-10 text-center">
+              <Package className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-20" />
+              <p className="text-muted-foreground font-medium">Select a strategy module above to view details</p>
+              <p className="text-xs text-muted-foreground mt-1">Click any module card to explore its architecture, score system, rules and run live evaluation</p>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
