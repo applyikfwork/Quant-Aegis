@@ -90,3 +90,4 @@ externalPort = 3000
 [userenv]
 
 [userenv.shared]
+SESSION_SECRET = "HYCu0JPv7Uim1NddcY1nDD3XksDIBV9HeUbZTfLTpEJRE3u03zf8uEg+6odApoWDscgYGY8CUNV0KcT04r8rdw=="

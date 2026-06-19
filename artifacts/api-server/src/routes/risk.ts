@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import { supabase, isOfflineMode } from "../lib/supabase";
+import { computeAccount, computePositions, computePerformance, getClosedTrades } from "../lib/paper-state";
 
 const router: IRouter = Router();
 const BASE_CAPITAL = 10000;
@@ -24,24 +25,52 @@ function accountSafety(score: number): string {
 // ── RISK DASHBOARD ────────────────────────────────────────────────────────────
 router.get("/risk/dashboard", async (_req, res): Promise<void> => {
   if (isOfflineMode) {
+    const acc = computeAccount();
+    const pos = computePositions();
+    const perf = computePerformance();
+    const closed = getClosedTrades();
+
+    const totalExposure = pos.reduce((s, p) => s + p.currentPrice * p.quantity, 0);
+    const exposurePct = (totalExposure / acc.initialBalance) * 100;
+    const today = new Date().toDateString();
+    const todayPnl = closed.filter(t => new Date(t.closeTime).toDateString() === today)
+      .reduce((s, t) => s + t.pnl, 0);
+    const dailyUsedPct = Math.abs(todayPnl / acc.initialBalance) * 100;
+
+    const pnls = closed.map(t => t.pnlPct);
+    const avgPnl = pnls.length > 0 ? pnls.reduce((a, b) => a + b, 0) / pnls.length : 0;
+    const variance = pnls.length > 1 ? pnls.reduce((s, p) => s + Math.pow(p - avgPnl, 2), 0) / (pnls.length - 1) : 0;
+    const volatility = Math.sqrt(variance);
+
+    const symMap = new Map<string, number>();
+    for (const p of pos) symMap.set(p.symbol, (symMap.get(p.symbol) ?? 0) + p.currentPrice * p.quantity);
+    const largest = pos.length > 0 ? Math.max(...Array.from(symMap.values())) : 0;
+    const concentrationRisk = totalExposure > 0 ? (largest / totalExposure) * 100 : 0;
+
+    const leverage = totalExposure > acc.initialBalance ? totalExposure / acc.initialBalance : totalExposure > 0 ? totalExposure / acc.initialBalance : 0;
+    const drawdown = perf.maxDrawdownPct;
+    const varAmount = totalExposure * (1.645 * (volatility / 100) * Math.sqrt(1));
+    const posWithStops = pos.filter(p => p.stopLoss != null).length;
+    const stopLossRate = pos.length > 0 ? (posWithStops / pos.length) * 100 : 100;
+    const riskScore = calcRiskScore(exposurePct, volatility, leverage, drawdown, concentrationRisk);
+
     res.json({
-      riskScore: 12,
-      accountSafety: "safe",
-      totalExposure: 0,
-      exposurePct: 0,
-      dailyPnl: 0,
+      riskScore, accountSafety: accountSafety(riskScore),
+      totalExposure: Math.round(totalExposure * 100) / 100,
+      exposurePct: Math.round(exposurePct * 10) / 10,
+      dailyPnl: Math.round(todayPnl * 100) / 100,
       dailyLimitPct: 5,
-      dailyUsedPct: 0,
-      openPositions: 0,
-      drawdown: 0,
-      peakValue: BASE_CAPITAL,
-      currentValue: BASE_CAPITAL,
-      leverage: 0,
-      liquidationBuffer: null,
-      varAmount: 0,
+      dailyUsedPct: Math.round(dailyUsedPct * 10) / 10,
+      openPositions: pos.length,
+      drawdown: Math.round(drawdown * 100) / 100,
+      peakValue: Math.round(acc.maxEquity * 100) / 100,
+      currentValue: Math.round(acc.equity * 100) / 100,
+      leverage: Math.round(leverage * 100) / 100,
+      liquidationBuffer: pos.length > 0 ? 12.5 : null,
+      varAmount: Math.round(varAmount * 100) / 100,
       varConfidence: 95,
-      stopLossRate: 100,
-      concentrationRisk: 0,
+      stopLossRate: Math.round(stopLossRate * 10) / 10,
+      concentrationRisk: Math.round(concentrationRisk * 10) / 10,
       alertCount: 0,
     });
     return;
@@ -110,7 +139,37 @@ router.get("/risk/dashboard", async (_req, res): Promise<void> => {
 
 // ── POSITION RISK ─────────────────────────────────────────────────────────────
 router.get("/risk/positions", async (_req, res): Promise<void> => {
-  if (isOfflineMode) { res.json([]); return; }
+  if (isOfflineMode) {
+    const pos = computePositions();
+    const acc = computeAccount();
+    const result = pos.map(p => {
+      const stopLoss = p.stopLoss ?? p.entryPrice * (p.side === "long" ? 0.97 : 1.03);
+      const stopDistance = Math.abs(p.entryPrice - stopLoss);
+      const stopDistancePct = p.entryPrice > 0 ? (stopDistance / p.entryPrice) * 100 : 0;
+      const positionValue = p.currentPrice * p.quantity;
+      const maxLoss = stopDistance * p.quantity;
+      const riskPct = acc.initialBalance > 0 ? (maxLoss / acc.initialBalance) * 100 : 0;
+      const liquidationBuffer = p.side === "long"
+        ? ((p.currentPrice - p.liquidationPrice) / p.currentPrice) * 100
+        : ((p.liquidationPrice - p.currentPrice) / p.currentPrice) * 100;
+      return {
+        id: p.id, symbol: p.symbol, side: p.side,
+        entryPrice: p.entryPrice, currentPrice: p.currentPrice,
+        stopLoss: p.stopLoss ?? stopLoss,
+        stopDistance: Math.round(stopDistance * 100) / 100,
+        stopDistancePct: Math.round(stopDistancePct * 100) / 100,
+        quantity: p.quantity,
+        positionValue: Math.round(positionValue * 100) / 100,
+        maxLoss: Math.round(maxLoss * 100) / 100,
+        riskPct: Math.round(riskPct * 100) / 100,
+        liquidationPrice: p.liquidationPrice,
+        liquidationBuffer: Math.round(liquidationBuffer * 100) / 100,
+        hasStopLoss: p.stopLoss != null,
+      };
+    });
+    res.json(result);
+    return;
+  }
 
   const { data: trades } = await supabase.from("trades").select("*");
   const open = (trades ?? []).filter(t => t.status === "open");
@@ -155,12 +214,26 @@ router.get("/risk/positions", async (_req, res): Promise<void> => {
 // ── VaR ENGINE ────────────────────────────────────────────────────────────────
 router.get("/risk/var", async (_req, res): Promise<void> => {
   if (isOfflineMode) {
+    const pos = computePositions();
+    const closed = getClosedTrades();
+    const totalExposure = pos.reduce((s, p) => s + p.currentPrice * p.quantity, 0);
+    const pnls = closed.map(t => t.pnlPct);
+    const avgPnl = pnls.length > 0 ? pnls.reduce((a, b) => a + b, 0) / pnls.length : 0;
+    const variance = pnls.length > 1 ? pnls.reduce((s, p) => s + Math.pow(p - avgPnl, 2), 0) / (pnls.length - 1) : 3.5;
+    const vol = Math.sqrt(variance) || 3.5;
+    const hVar95 = totalExposure * (1.645 * (vol / 100));
+    const hVar99 = totalExposure * (2.326 * (vol / 100));
     res.json({
-      historicalVar95: 0, historicalVar99: 0,
-      simulationVar95: 0, simulationVar99: 0,
-      expectedShortfall95: 0, expectedShortfall99: 0,
-      portfolioVolatility: 0, dailyVar: 0,
-      weeklyVar: 0, monthlyVar: 0,
+      historicalVar95: Math.round(hVar95 * 100) / 100,
+      historicalVar99: Math.round(hVar99 * 100) / 100,
+      simulationVar95: Math.round(hVar95 * 1.1 * 100) / 100,
+      simulationVar99: Math.round(hVar99 * 1.12 * 100) / 100,
+      expectedShortfall95: Math.round(hVar95 * 1.25 * 100) / 100,
+      expectedShortfall99: Math.round(hVar99 * 1.3 * 100) / 100,
+      portfolioVolatility: Math.round(vol * 100) / 100,
+      dailyVar: Math.round(hVar95 * 100) / 100,
+      weeklyVar: Math.round(hVar95 * Math.sqrt(5) * 100) / 100,
+      monthlyVar: Math.round(hVar95 * Math.sqrt(21) * 100) / 100,
     });
     return;
   }
@@ -200,11 +273,31 @@ router.get("/risk/var", async (_req, res): Promise<void> => {
 // ── DRAWDOWN ENGINE ───────────────────────────────────────────────────────────
 router.get("/risk/drawdown", async (_req, res): Promise<void> => {
   if (isOfflineMode) {
+    const acc = computeAccount();
+    const closed = getClosedTrades();
+    const sorted = [...closed].sort((a, b) => new Date(a.closeTime).getTime() - new Date(b.closeTime).getTime());
+    let runningValue = acc.initialBalance;
+    let peak = acc.initialBalance;
+    let maxDrawdownPct = 0;
+    const history: { date: string; value: number; drawdownPct: number }[] = [];
+    for (const t of sorted) {
+      runningValue += t.pnl;
+      if (runningValue > peak) peak = runningValue;
+      const dd = peak > 0 ? ((peak - runningValue) / peak) * 100 : 0;
+      if (dd > maxDrawdownPct) maxDrawdownPct = dd;
+      history.push({ date: new Date(t.closeTime).toLocaleDateString(), value: Math.round(runningValue * 100) / 100, drawdownPct: Math.round(dd * 100) / 100 });
+    }
+    const currentDrawdown = peak > 0 ? ((peak - runningValue) / peak) * 100 : 0;
+    const recoveryNeeded = runningValue < peak ? ((peak - runningValue) / runningValue) * 100 : 0;
+    const status = currentDrawdown >= 20 ? "critical" : currentDrawdown >= 10 ? "danger" : currentDrawdown >= 5 ? "warning" : "safe";
     res.json({
-      peakValue: BASE_CAPITAL, currentValue: BASE_CAPITAL,
-      drawdownAmount: 0, drawdownPct: 0, maxDrawdownPct: 0,
-      recoveryNeeded: 0, status: "safe",
-      history: [],
+      peakValue: Math.round(peak * 100) / 100,
+      currentValue: Math.round(acc.equity * 100) / 100,
+      drawdownAmount: Math.round((peak - acc.equity) * 100) / 100,
+      drawdownPct: Math.round(currentDrawdown * 100) / 100,
+      maxDrawdownPct: Math.round(maxDrawdownPct * 100) / 100,
+      recoveryNeeded: Math.round(recoveryNeeded * 100) / 100,
+      status, history: history.slice(-30),
     });
     return;
   }
@@ -250,10 +343,20 @@ router.get("/risk/drawdown", async (_req, res): Promise<void> => {
 // ── LEVERAGE MONITOR ──────────────────────────────────────────────────────────
 router.get("/risk/leverage", async (_req, res): Promise<void> => {
   if (isOfflineMode) {
+    const acc = computeAccount();
+    const pos = computePositions();
+    const totalExposure = pos.reduce((s, p) => s + p.currentPrice * p.quantity, 0);
+    const currentLeverage = totalExposure > 0 ? totalExposure / acc.initialBalance : 0;
+    const marginUsedPct = Math.min(100, (acc.usedMargin / acc.equity) * 100);
+    const status = currentLeverage > 8 ? "critical" : currentLeverage > 5 ? "danger" : currentLeverage > 3 ? "warning" : "safe";
     res.json({
-      currentLeverage: 0, recommendedLeverage: 3, maxLeverage: 5,
-      marginUsed: 0, marginAvailable: BASE_CAPITAL, marginUsedPct: 0,
-      liquidationDistance: null, status: "safe",
+      currentLeverage: Math.round(currentLeverage * 100) / 100,
+      recommendedLeverage: 3, maxLeverage: 5,
+      marginUsed: Math.round(acc.usedMargin * 100) / 100,
+      marginAvailable: Math.round(acc.freeMargin * 100) / 100,
+      marginUsedPct: Math.round(marginUsedPct * 10) / 10,
+      liquidationDistance: pos.length > 0 ? 12.5 : null,
+      status,
     });
     return;
   }
@@ -283,17 +386,52 @@ router.get("/risk/leverage", async (_req, res): Promise<void> => {
 // ── AI RISK ADVISOR ───────────────────────────────────────────────────────────
 router.get("/risk/ai-advisor", async (_req, res): Promise<void> => {
   if (isOfflineMode) {
+    const acc = computeAccount();
+    const pos = computePositions();
+    const perf = computePerformance();
+    const closed = getClosedTrades();
+    const totalExposure = pos.reduce((s, p) => s + p.currentPrice * p.quantity, 0);
+    const exposurePct = (totalExposure / acc.initialBalance) * 100;
+    const posWithoutStops = pos.filter(p => !p.stopLoss);
+    const winRate = perf.winRate;
+    const symMap = new Map<string, number>();
+    for (const p of pos) symMap.set(p.symbol, (symMap.get(p.symbol) ?? 0) + 1);
+    const highConcentration = Array.from(symMap.entries()).filter(([, c]) => c > 2);
+
+    const alerts: { severity: string; message: string }[] = [];
+    const recommendations: string[] = [];
+    const positionAdvice: { symbol: string; advice: string; action: string }[] = [];
+
+    if (posWithoutStops.length > 0) {
+      alerts.push({ severity: "critical", message: `${posWithoutStops.length} position(s) have no stop loss — immediate risk to capital` });
+      for (const p of posWithoutStops) positionAdvice.push({ symbol: p.symbol, advice: "No stop loss set. Set a stop loss immediately to protect downside.", action: "set_stop" });
+    }
+    if (exposurePct > 80) alerts.push({ severity: "danger", message: `Exposure at ${exposurePct.toFixed(1)}% of account — dangerously high` });
+    else if (exposurePct > 60) alerts.push({ severity: "warning", message: `Exposure at ${exposurePct.toFixed(1)}% of account — approaching limit` });
+    for (const [sym] of highConcentration) {
+      alerts.push({ severity: "warning", message: `High concentration in ${sym} — consider reducing` });
+      positionAdvice.push({ symbol: sym, advice: "Multiple positions in same asset increase correlation risk.", action: "reduce_size" });
+    }
+    if (winRate < 40 && closed.length >= 5) {
+      alerts.push({ severity: "warning", message: `Win rate at ${winRate.toFixed(0)}% — below optimal threshold` });
+      recommendations.push("Win rate below 40% — review entry conditions and tighten AI confidence filters");
+    }
+    if (recommendations.length === 0) recommendations.push("Risk profile is healthy. Continue current position management.");
+    recommendations.push("Ensure every new trade has a minimum 1.5:1 risk-reward ratio before entry");
+    recommendations.push("Monitor correlation between crypto positions — they often move together in market events");
+
+    const riskLevel = alerts.some(a => a.severity === "critical") ? "critical"
+      : alerts.some(a => a.severity === "danger") ? "high"
+      : alerts.some(a => a.severity === "warning") ? "medium" : "low";
+
+    let overallAssessment = pos.length === 0
+      ? "Portfolio is in full cash. No active risk exposure. System is ready for new opportunities."
+      : `${pos.length} active position${pos.length > 1 ? "s" : ""} with ${exposurePct.toFixed(0)}% account exposure. ${riskLevel === "low" ? "Overall risk profile is well-managed." : "Some risk areas require attention."}`;
+
     res.json({
-      overallAssessment: "System is in offline mode. No live positions to analyze. Connect your database to enable AI risk analysis.",
-      riskLevel: "low",
-      confidence: 45,
-      alerts: [],
-      recommendations: [
-        "Connect SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to enable live risk analysis",
-        "Start with small positions to calibrate the risk engine",
-        "Always set stop losses on every position",
-      ],
-      positionAdvice: [],
+      overallAssessment, riskLevel,
+      confidence: Math.min(90, 50 + closed.length * 2 + (pos.length > 0 ? 10 : 0)),
+      alerts, recommendations, positionAdvice,
       generatedAt: new Date().toISOString(),
     });
     return;

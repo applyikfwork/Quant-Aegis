@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import { supabase, isOfflineMode } from "../lib/supabase";
+import { computePositions, getClosedTrades } from "../lib/paper-state";
 import {
   CreateTradeBody,
   UpdateTradeBody,
@@ -13,7 +14,38 @@ import {
 const router: IRouter = Router();
 
 router.get("/trades", async (req, res): Promise<void> => {
-  if (isOfflineMode) { res.json([]); return; }
+  if (isOfflineMode) {
+    const query = ListTradesQueryParams.safeParse(req.query);
+    const statusFilter = query.success ? query.data.status : undefined;
+    const symbolFilter = query.success ? query.data.symbol : undefined;
+    const limit = (query.success ? query.data.limit : undefined) ?? 50;
+
+    const openPos = computePositions().map(p => ({
+      id: p.id, symbol: p.symbol, strategyId: null, side: p.side,
+      entryPrice: p.entryPrice, exitPrice: null, quantity: p.quantity,
+      stopLoss: p.stopLoss ?? null, takeProfit: p.takeProfit ?? null,
+      profitLoss: p.unrealizedPnl, profitPercent: p.unrealizedPnlPct,
+      status: "open", aiConfidence: p.aiConfidence ?? null, timeframe: "1h",
+      entryTime: p.openTime, exitTime: null, createdAt: p.openTime, strategyName: null,
+    }));
+
+    const closedT = getClosedTrades().map(t => ({
+      id: t.id, symbol: t.symbol, strategyId: null, side: t.side,
+      entryPrice: t.entryPrice, exitPrice: t.exitPrice, quantity: t.quantity,
+      stopLoss: null, takeProfit: null,
+      profitLoss: t.pnl, profitPercent: t.pnlPct,
+      status: "closed", aiConfidence: t.aiConfidence ?? null, timeframe: "1h",
+      entryTime: t.openTime, exitTime: t.closeTime, createdAt: t.openTime, strategyName: null,
+    }));
+
+    let all = statusFilter === "open" ? openPos
+      : statusFilter === "closed" ? closedT
+      : [...openPos, ...closedT];
+
+    if (symbolFilter) all = all.filter(t => t.symbol === symbolFilter);
+    res.json(all.slice(0, limit));
+    return;
+  }
   const query = ListTradesQueryParams.safeParse(req.query);
   if (!query.success) { res.status(400).json({ error: query.error.message }); return; }
 

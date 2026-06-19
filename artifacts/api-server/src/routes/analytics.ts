@@ -1,17 +1,31 @@
 import { Router, type IRouter } from "express";
 import { supabase, isOfflineMode } from "../lib/supabase";
 import { GetDailyPerformanceQueryParams } from "@workspace/api-zod";
+import { computePerformance, computePositions, getClosedTrades } from "../lib/paper-state";
 
 const router: IRouter = Router();
 
-const OFFLINE_PERFORMANCE = {
-  totalTrades: 0, openTrades: 0, closedTrades: 0, wins: 0, losses: 0,
-  winRate: 0, totalPnl: 0, avgWin: 0, avgLoss: 0, profitFactor: 0,
-  maxDrawdown: 0, sharpeRatio: 0, expectancy: 0,
-};
-
 router.get("/analytics/performance", async (_req, res): Promise<void> => {
-  if (isOfflineMode) { res.json(OFFLINE_PERFORMANCE); return; }
+  if (isOfflineMode) {
+    const perf = computePerformance();
+    const pos = computePositions();
+    res.json({
+      totalTrades: perf.totalTrades + pos.length,
+      openTrades: pos.length,
+      closedTrades: perf.totalTrades,
+      wins: perf.wins,
+      losses: perf.losses,
+      winRate: Math.round(perf.winRate * 100) / 100,
+      totalPnl: Math.round(perf.totalPnl * 100) / 100,
+      avgWin: Math.round(perf.avgWin * 100) / 100,
+      avgLoss: Math.round(perf.avgLoss * 100) / 100,
+      profitFactor: Math.round(perf.profitFactor * 100) / 100,
+      maxDrawdown: Math.round(perf.maxDrawdownPct * 100) / 100,
+      sharpeRatio: Math.round(perf.sharpeRatio * 1000) / 1000,
+      expectancy: Math.round(perf.expectancy * 100) / 100,
+    });
+    return;
+  }
   const [{ data: allTrades }, { data: openTrades }] = await Promise.all([
     supabase.from("trades").select("profit_loss, profit_percent, entry_time").eq("status", "closed").order("entry_time"),
     supabase.from("trades").select("id").eq("status", "open"),
@@ -57,7 +71,40 @@ router.get("/analytics/performance", async (_req, res): Promise<void> => {
 });
 
 router.get("/analytics/daily", async (req, res): Promise<void> => {
-  if (isOfflineMode) { res.json([]); return; }
+  if (isOfflineMode) {
+    const query = GetDailyPerformanceQueryParams.safeParse(req.query);
+    const days = query.success ? (query.data.days ?? 30) : 30;
+    const closed = getClosedTrades();
+
+    const byDay = new Map<string, { pnl: number; trades: number; wins: number; losses: number }>();
+    for (const t of closed) {
+      const day = new Date(t.closeTime).toISOString().slice(0, 10);
+      const e = byDay.get(day) ?? { pnl: 0, trades: 0, wins: 0, losses: 0 };
+      e.pnl += t.pnl; e.trades += 1;
+      if (t.pnl > 0) e.wins += 1; else e.losses += 1;
+      byDay.set(day, e);
+    }
+
+    const result = [];
+    let cumPnl = 0, peak = 0;
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(); d.setDate(d.getDate() - i);
+      const day = d.toISOString().slice(0, 10);
+      const data = byDay.get(day) ?? { pnl: 0, trades: 0, wins: 0, losses: 0 };
+      cumPnl += data.pnl;
+      if (cumPnl > peak) peak = cumPnl;
+      const drawdown = peak > 0 ? ((peak - cumPnl) / peak) * 100 : 0;
+      result.push({
+        date: day, pnl: Math.round(data.pnl * 100) / 100, trades: data.trades,
+        wins: data.wins, losses: data.losses,
+        winRate: data.trades > 0 ? Math.round((data.wins / data.trades) * 10000) / 100 : 0,
+        cumulativePnl: Math.round(cumPnl * 100) / 100,
+        drawdown: Math.round(drawdown * 100) / 100,
+      });
+    }
+    res.json(result);
+    return;
+  }
   const query = GetDailyPerformanceQueryParams.safeParse(req.query);
   const days = query.success ? (query.data.days ?? 30) : 30;
   const since = new Date();

@@ -1,5 +1,6 @@
 import { supabase } from "./supabase";
 import { logger } from "./logger";
+import { updateLivePrice } from "./live-prices";
 
 const SYMBOLS = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "ADAUSDT", "AVAXUSDT", "DOGEUSDT"];
 
@@ -74,6 +75,11 @@ function computeADX(highs: number[], lows: number[], closes: number[], period = 
 
 async function syncSymbol(symbol: string, timeframe: string): Promise<void> {
   const candles = await fetchBybitCandles(symbol, timeframe, 200);
+
+  // Always update live price cache from latest candle, regardless of Supabase availability
+  if (candles.length > 0 && timeframe === "1m") {
+    updateLivePrice(symbol, candles[candles.length - 1].c);
+  }
 
   const rows = candles.map(c => ({
     symbol, timeframe,
