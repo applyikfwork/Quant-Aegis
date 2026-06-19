@@ -921,6 +921,178 @@ paths:
               schema:
                 $ref: "#/components/schemas/RiskCalcResult"
 
+  /risk/dashboard:
+    get:
+      operationId: getRiskDashboard
+      tags: [risk]
+      summary: Get full risk dashboard metrics
+      responses:
+        "200":
+          description: Risk dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RiskDashboard"
+
+  /risk/positions:
+    get:
+      operationId: getRiskPositions
+      tags: [risk]
+      summary: Get per-position risk breakdown
+      responses:
+        "200":
+          description: Position risk list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PositionRiskItem"
+
+  /risk/var:
+    get:
+      operationId: getRiskVar
+      tags: [risk]
+      summary: Get Value at Risk and Expected Shortfall
+      responses:
+        "200":
+          description: VaR metrics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RiskVar"
+
+  /risk/drawdown:
+    get:
+      operationId: getRiskDrawdown
+      tags: [risk]
+      summary: Get drawdown tracking and history
+      responses:
+        "200":
+          description: Drawdown data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RiskDrawdown"
+
+  /risk/leverage:
+    get:
+      operationId: getRiskLeverage
+      tags: [risk]
+      summary: Get leverage and margin monitoring
+      responses:
+        "200":
+          description: Leverage metrics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RiskLeverage"
+
+  /risk/ai-advisor:
+    get:
+      operationId: getRiskAiAdvisor
+      tags: [risk]
+      summary: Get AI risk advisor analysis
+      responses:
+        "200":
+          description: AI risk assessment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RiskAiAdvisor"
+
+  /risk/rules:
+    get:
+      operationId: listRiskRules
+      tags: [risk]
+      summary: List all active risk rules
+      responses:
+        "200":
+          description: Risk rules
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RiskRule"
+
+  /risk/alerts:
+    get:
+      operationId: listRiskAlerts
+      tags: [risk]
+      summary: List active unresolved risk alerts
+      responses:
+        "200":
+          description: Risk alerts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RiskAlert"
+
+  /risk/history:
+    get:
+      operationId: listRiskHistory
+      tags: [risk]
+      summary: List full risk event history
+      responses:
+        "200":
+          description: Risk event history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RiskAlert"
+
+  /risk/stress-test:
+    get:
+      operationId: getRiskStressTest
+      tags: [risk]
+      summary: Run stress test scenarios
+      responses:
+        "200":
+          description: Stress test results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StressTestResult"
+
+  /risk/approve-trade:
+    post:
+      operationId: approveTradeRisk
+      tags: [risk]
+      summary: Run risk approval check for a trade
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TradeApprovalInput"
+      responses:
+        "200":
+          description: Approval decision
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TradeApprovalResult"
+
+  /risk/report:
+    get:
+      operationId: getRiskReport
+      tags: [risk]
+      summary: Get risk report summary
+      responses:
+        "200":
+          description: Risk report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RiskReport"
+
   /experiments:
     get:
       operationId: listExperiments
@@ -1565,6 +1737,323 @@ components:
           type: boolean
         lesson:
           type: string
+
+    # ── RISK CENTER ───────────────────────────────────────────────────────────────
+    RiskDashboard:
+      type: object
+      required: [riskScore, accountSafety, totalExposure, exposurePct, dailyPnl, dailyLimitPct, dailyUsedPct, openPositions, drawdown, peakValue, currentValue, leverage, varAmount, varConfidence, stopLossRate, concentrationRisk, alertCount]
+      properties:
+        riskScore:
+          type: number
+        accountSafety:
+          type: string
+        totalExposure:
+          type: number
+        exposurePct:
+          type: number
+        dailyPnl:
+          type: number
+        dailyLimitPct:
+          type: number
+        dailyUsedPct:
+          type: number
+        openPositions:
+          type: integer
+        drawdown:
+          type: number
+        peakValue:
+          type: number
+        currentValue:
+          type: number
+        leverage:
+          type: number
+        liquidationBuffer:
+          type: ["number", "null"]
+        varAmount:
+          type: number
+        varConfidence:
+          type: number
+        stopLossRate:
+          type: number
+        concentrationRisk:
+          type: number
+        alertCount:
+          type: integer
+
+    PositionRiskItem:
+      type: object
+      required: [id, symbol, side, entryPrice, currentPrice, stopLoss, stopDistance, stopDistancePct, quantity, positionValue, maxLoss, riskPct, liquidationPrice, liquidationBuffer, hasStopLoss]
+      properties:
+        id:
+          type: integer
+        symbol:
+          type: string
+        side:
+          type: string
+        entryPrice:
+          type: number
+        currentPrice:
+          type: number
+        stopLoss:
+          type: number
+        stopDistance:
+          type: number
+        stopDistancePct:
+          type: number
+        quantity:
+          type: number
+        positionValue:
+          type: number
+        maxLoss:
+          type: number
+        riskPct:
+          type: number
+        liquidationPrice:
+          type: number
+        liquidationBuffer:
+          type: number
+        hasStopLoss:
+          type: boolean
+
+    RiskVar:
+      type: object
+      required: [historicalVar95, historicalVar99, simulationVar95, simulationVar99, expectedShortfall95, expectedShortfall99, portfolioVolatility, dailyVar, weeklyVar, monthlyVar]
+      properties:
+        historicalVar95:
+          type: number
+        historicalVar99:
+          type: number
+        simulationVar95:
+          type: number
+        simulationVar99:
+          type: number
+        expectedShortfall95:
+          type: number
+        expectedShortfall99:
+          type: number
+        portfolioVolatility:
+          type: number
+        dailyVar:
+          type: number
+        weeklyVar:
+          type: number
+        monthlyVar:
+          type: number
+
+    RiskDrawdown:
+      type: object
+      required: [peakValue, currentValue, drawdownAmount, drawdownPct, maxDrawdownPct, recoveryNeeded, status, history]
+      properties:
+        peakValue:
+          type: number
+        currentValue:
+          type: number
+        drawdownAmount:
+          type: number
+        drawdownPct:
+          type: number
+        maxDrawdownPct:
+          type: number
+        recoveryNeeded:
+          type: number
+        status:
+          type: string
+        history:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+              value:
+                type: number
+              drawdownPct:
+                type: number
+
+    RiskLeverage:
+      type: object
+      required: [currentLeverage, recommendedLeverage, maxLeverage, marginUsed, marginAvailable, marginUsedPct, status]
+      properties:
+        currentLeverage:
+          type: number
+        recommendedLeverage:
+          type: number
+        maxLeverage:
+          type: number
+        marginUsed:
+          type: number
+        marginAvailable:
+          type: number
+        marginUsedPct:
+          type: number
+        liquidationDistance:
+          type: ["number", "null"]
+        status:
+          type: string
+
+    RiskAiAdvisor:
+      type: object
+      required: [overallAssessment, riskLevel, confidence, alerts, recommendations, positionAdvice, generatedAt]
+      properties:
+        overallAssessment:
+          type: string
+        riskLevel:
+          type: string
+        confidence:
+          type: number
+        alerts:
+          type: array
+          items:
+            type: object
+            properties:
+              severity:
+                type: string
+              message:
+                type: string
+        recommendations:
+          type: array
+          items:
+            type: string
+        positionAdvice:
+          type: array
+          items:
+            type: object
+            properties:
+              symbol:
+                type: string
+              advice:
+                type: string
+              action:
+                type: string
+        generatedAt:
+          type: string
+
+    RiskRule:
+      type: object
+      required: [id, rule, category, active]
+      properties:
+        id:
+          type: integer
+        rule:
+          type: string
+        category:
+          type: string
+        active:
+          type: boolean
+        phase:
+          type: ["string", "null"]
+
+    RiskAlert:
+      type: object
+      required: [id, type, severity, message, resolved, createdAt]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        severity:
+          type: string
+        message:
+          type: string
+        detail:
+          type: ["string", "null"]
+        resolved:
+          type: boolean
+        createdAt:
+          type: string
+
+    StressTestResult:
+      type: object
+      required: [name, description, marketMove, portfolioMove, impact, newPortfolioValue, survivable, severity]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        marketMove:
+          type: number
+        portfolioMove:
+          type: number
+        impact:
+          type: number
+        newPortfolioValue:
+          type: number
+        survivable:
+          type: boolean
+        severity:
+          type: string
+
+    TradeApprovalInput:
+      type: object
+      required: [symbol, side, requestedSize]
+      properties:
+        symbol:
+          type: string
+        side:
+          type: string
+        requestedSize:
+          type: number
+        entry:
+          type: number
+        stopLoss:
+          type: number
+        aiConfidence:
+          type: number
+        account:
+          type: number
+
+    TradeApprovalResult:
+      type: object
+      required: [decision, approvedSize, reason, issues, riskScore, riskPct, positionValue]
+      properties:
+        decision:
+          type: string
+        approvedSize:
+          type: number
+        reason:
+          type: string
+        issues:
+          type: array
+          items:
+            type: string
+        riskScore:
+          type: number
+        riskPct:
+          type: number
+        positionValue:
+          type: number
+
+    RiskReport:
+      type: object
+      required: [period, generatedAt, summary, topRisks, improvements]
+      properties:
+        period:
+          type: string
+        generatedAt:
+          type: string
+        summary:
+          type: object
+          properties:
+            riskScore:
+              type: number
+            totalTrades:
+              type: integer
+            winRate:
+              type: number
+            maxDrawdown:
+              type: number
+            avgExposure:
+              type: number
+            totalPnl:
+              type: number
+        topRisks:
+          type: array
+          items:
+            type: string
+        improvements:
+          type: array
+          items:
+            type: string
 
     # ── RISK ENGINE ───────────────────────────────────────────────────────────────
     RiskCalcInput:

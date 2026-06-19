@@ -13,6 +13,7 @@ import paperTradingRouter from "./paper-trading";
 import learningRouter from "./learning";
 import journalRouter from "./journal";
 import portfolioRouter from "./portfolio";
+import riskRouter from "./risk";
 
 const router: IRouter = Router();
 
@@ -30,5 +31,6 @@ router.use(systemRouter);
 router.use(aiRouter);
 router.use(paperTradingRouter);
 router.use(learningRouter);
+router.use(riskRouter);
 
 export default router;

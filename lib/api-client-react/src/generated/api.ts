@@ -49,18 +49,30 @@ import type {
   PortfolioAiAnalysis,
   PortfolioRisk,
   PortfolioSummary,
+  PositionRiskItem,
+  RiskAiAdvisor,
+  RiskAlert,
   RiskCalcInput,
   RiskCalcResult,
+  RiskDashboard,
+  RiskDrawdown,
+  RiskLeverage,
+  RiskReport,
+  RiskRule,
+  RiskVar,
   Signal,
   SignalInput,
   Strategy,
   StrategyInput,
   StrategyPerf,
   StrategyUpdate,
+  StressTestResult,
   StressTestScenario,
   SystemLog,
   SystemStatus,
   Trade,
+  TradeApprovalInput,
+  TradeApprovalResult,
   TradeEvent,
   TradeEventInput,
   TradeInput,
@@ -3665,6 +3677,924 @@ export const useCalculateRisk = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getCalculateRiskMutationOptions(options));
     }
+
+export const getGetRiskDashboardUrl = () => {
+
+
+
+
+  return `/api/risk/dashboard`
+}
+
+/**
+ * @summary Get full risk dashboard metrics
+ */
+export const getRiskDashboard = async ( options?: RequestInit): Promise<RiskDashboard> => {
+
+  return customFetch<RiskDashboard>(getGetRiskDashboardUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetRiskDashboardQueryKey = () => {
+    return [
+    `/api/risk/dashboard`
+    ] as const;
+    }
+
+
+export const getGetRiskDashboardQueryOptions = <TData = Awaited<ReturnType<typeof getRiskDashboard>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRiskDashboard>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetRiskDashboardQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRiskDashboard>>> = ({ signal }) => getRiskDashboard({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getRiskDashboard>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetRiskDashboardQueryResult = NonNullable<Awaited<ReturnType<typeof getRiskDashboard>>>
+export type GetRiskDashboardQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get full risk dashboard metrics
+ */
+
+export function useGetRiskDashboard<TData = Awaited<ReturnType<typeof getRiskDashboard>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRiskDashboard>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetRiskDashboardQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetRiskPositionsUrl = () => {
+
+
+
+
+  return `/api/risk/positions`
+}
+
+/**
+ * @summary Get per-position risk breakdown
+ */
+export const getRiskPositions = async ( options?: RequestInit): Promise<PositionRiskItem[]> => {
+
+  return customFetch<PositionRiskItem[]>(getGetRiskPositionsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetRiskPositionsQueryKey = () => {
+    return [
+    `/api/risk/positions`
+    ] as const;
+    }
+
+
+export const getGetRiskPositionsQueryOptions = <TData = Awaited<ReturnType<typeof getRiskPositions>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRiskPositions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetRiskPositionsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRiskPositions>>> = ({ signal }) => getRiskPositions({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getRiskPositions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetRiskPositionsQueryResult = NonNullable<Awaited<ReturnType<typeof getRiskPositions>>>
+export type GetRiskPositionsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get per-position risk breakdown
+ */
+
+export function useGetRiskPositions<TData = Awaited<ReturnType<typeof getRiskPositions>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRiskPositions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetRiskPositionsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetRiskVarUrl = () => {
+
+
+
+
+  return `/api/risk/var`
+}
+
+/**
+ * @summary Get Value at Risk and Expected Shortfall
+ */
+export const getRiskVar = async ( options?: RequestInit): Promise<RiskVar> => {
+
+  return customFetch<RiskVar>(getGetRiskVarUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetRiskVarQueryKey = () => {
+    return [
+    `/api/risk/var`
+    ] as const;
+    }
+
+
+export const getGetRiskVarQueryOptions = <TData = Awaited<ReturnType<typeof getRiskVar>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRiskVar>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetRiskVarQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRiskVar>>> = ({ signal }) => getRiskVar({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getRiskVar>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetRiskVarQueryResult = NonNullable<Awaited<ReturnType<typeof getRiskVar>>>
+export type GetRiskVarQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get Value at Risk and Expected Shortfall
+ */
+
+export function useGetRiskVar<TData = Awaited<ReturnType<typeof getRiskVar>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRiskVar>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetRiskVarQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetRiskDrawdownUrl = () => {
+
+
+
+
+  return `/api/risk/drawdown`
+}
+
+/**
+ * @summary Get drawdown tracking and history
+ */
+export const getRiskDrawdown = async ( options?: RequestInit): Promise<RiskDrawdown> => {
+
+  return customFetch<RiskDrawdown>(getGetRiskDrawdownUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetRiskDrawdownQueryKey = () => {
+    return [
+    `/api/risk/drawdown`
+    ] as const;
+    }
+
+
+export const getGetRiskDrawdownQueryOptions = <TData = Awaited<ReturnType<typeof getRiskDrawdown>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRiskDrawdown>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetRiskDrawdownQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRiskDrawdown>>> = ({ signal }) => getRiskDrawdown({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getRiskDrawdown>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetRiskDrawdownQueryResult = NonNullable<Awaited<ReturnType<typeof getRiskDrawdown>>>
+export type GetRiskDrawdownQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get drawdown tracking and history
+ */
+
+export function useGetRiskDrawdown<TData = Awaited<ReturnType<typeof getRiskDrawdown>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRiskDrawdown>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetRiskDrawdownQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetRiskLeverageUrl = () => {
+
+
+
+
+  return `/api/risk/leverage`
+}
+
+/**
+ * @summary Get leverage and margin monitoring
+ */
+export const getRiskLeverage = async ( options?: RequestInit): Promise<RiskLeverage> => {
+
+  return customFetch<RiskLeverage>(getGetRiskLeverageUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetRiskLeverageQueryKey = () => {
+    return [
+    `/api/risk/leverage`
+    ] as const;
+    }
+
+
+export const getGetRiskLeverageQueryOptions = <TData = Awaited<ReturnType<typeof getRiskLeverage>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRiskLeverage>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetRiskLeverageQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRiskLeverage>>> = ({ signal }) => getRiskLeverage({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getRiskLeverage>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetRiskLeverageQueryResult = NonNullable<Awaited<ReturnType<typeof getRiskLeverage>>>
+export type GetRiskLeverageQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get leverage and margin monitoring
+ */
+
+export function useGetRiskLeverage<TData = Awaited<ReturnType<typeof getRiskLeverage>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRiskLeverage>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetRiskLeverageQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetRiskAiAdvisorUrl = () => {
+
+
+
+
+  return `/api/risk/ai-advisor`
+}
+
+/**
+ * @summary Get AI risk advisor analysis
+ */
+export const getRiskAiAdvisor = async ( options?: RequestInit): Promise<RiskAiAdvisor> => {
+
+  return customFetch<RiskAiAdvisor>(getGetRiskAiAdvisorUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetRiskAiAdvisorQueryKey = () => {
+    return [
+    `/api/risk/ai-advisor`
+    ] as const;
+    }
+
+
+export const getGetRiskAiAdvisorQueryOptions = <TData = Awaited<ReturnType<typeof getRiskAiAdvisor>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRiskAiAdvisor>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetRiskAiAdvisorQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRiskAiAdvisor>>> = ({ signal }) => getRiskAiAdvisor({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getRiskAiAdvisor>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetRiskAiAdvisorQueryResult = NonNullable<Awaited<ReturnType<typeof getRiskAiAdvisor>>>
+export type GetRiskAiAdvisorQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get AI risk advisor analysis
+ */
+
+export function useGetRiskAiAdvisor<TData = Awaited<ReturnType<typeof getRiskAiAdvisor>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRiskAiAdvisor>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetRiskAiAdvisorQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListRiskRulesUrl = () => {
+
+
+
+
+  return `/api/risk/rules`
+}
+
+/**
+ * @summary List all active risk rules
+ */
+export const listRiskRules = async ( options?: RequestInit): Promise<RiskRule[]> => {
+
+  return customFetch<RiskRule[]>(getListRiskRulesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListRiskRulesQueryKey = () => {
+    return [
+    `/api/risk/rules`
+    ] as const;
+    }
+
+
+export const getListRiskRulesQueryOptions = <TData = Awaited<ReturnType<typeof listRiskRules>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listRiskRules>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListRiskRulesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listRiskRules>>> = ({ signal }) => listRiskRules({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listRiskRules>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListRiskRulesQueryResult = NonNullable<Awaited<ReturnType<typeof listRiskRules>>>
+export type ListRiskRulesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List all active risk rules
+ */
+
+export function useListRiskRules<TData = Awaited<ReturnType<typeof listRiskRules>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listRiskRules>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListRiskRulesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListRiskAlertsUrl = () => {
+
+
+
+
+  return `/api/risk/alerts`
+}
+
+/**
+ * @summary List active unresolved risk alerts
+ */
+export const listRiskAlerts = async ( options?: RequestInit): Promise<RiskAlert[]> => {
+
+  return customFetch<RiskAlert[]>(getListRiskAlertsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListRiskAlertsQueryKey = () => {
+    return [
+    `/api/risk/alerts`
+    ] as const;
+    }
+
+
+export const getListRiskAlertsQueryOptions = <TData = Awaited<ReturnType<typeof listRiskAlerts>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listRiskAlerts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListRiskAlertsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listRiskAlerts>>> = ({ signal }) => listRiskAlerts({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listRiskAlerts>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListRiskAlertsQueryResult = NonNullable<Awaited<ReturnType<typeof listRiskAlerts>>>
+export type ListRiskAlertsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List active unresolved risk alerts
+ */
+
+export function useListRiskAlerts<TData = Awaited<ReturnType<typeof listRiskAlerts>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listRiskAlerts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListRiskAlertsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListRiskHistoryUrl = () => {
+
+
+
+
+  return `/api/risk/history`
+}
+
+/**
+ * @summary List full risk event history
+ */
+export const listRiskHistory = async ( options?: RequestInit): Promise<RiskAlert[]> => {
+
+  return customFetch<RiskAlert[]>(getListRiskHistoryUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListRiskHistoryQueryKey = () => {
+    return [
+    `/api/risk/history`
+    ] as const;
+    }
+
+
+export const getListRiskHistoryQueryOptions = <TData = Awaited<ReturnType<typeof listRiskHistory>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listRiskHistory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListRiskHistoryQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listRiskHistory>>> = ({ signal }) => listRiskHistory({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listRiskHistory>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListRiskHistoryQueryResult = NonNullable<Awaited<ReturnType<typeof listRiskHistory>>>
+export type ListRiskHistoryQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List full risk event history
+ */
+
+export function useListRiskHistory<TData = Awaited<ReturnType<typeof listRiskHistory>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listRiskHistory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListRiskHistoryQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetRiskStressTestUrl = () => {
+
+
+
+
+  return `/api/risk/stress-test`
+}
+
+/**
+ * @summary Run stress test scenarios
+ */
+export const getRiskStressTest = async ( options?: RequestInit): Promise<StressTestResult[]> => {
+
+  return customFetch<StressTestResult[]>(getGetRiskStressTestUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetRiskStressTestQueryKey = () => {
+    return [
+    `/api/risk/stress-test`
+    ] as const;
+    }
+
+
+export const getGetRiskStressTestQueryOptions = <TData = Awaited<ReturnType<typeof getRiskStressTest>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRiskStressTest>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetRiskStressTestQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRiskStressTest>>> = ({ signal }) => getRiskStressTest({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getRiskStressTest>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetRiskStressTestQueryResult = NonNullable<Awaited<ReturnType<typeof getRiskStressTest>>>
+export type GetRiskStressTestQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Run stress test scenarios
+ */
+
+export function useGetRiskStressTest<TData = Awaited<ReturnType<typeof getRiskStressTest>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRiskStressTest>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetRiskStressTestQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getApproveTradeRiskUrl = () => {
+
+
+
+
+  return `/api/risk/approve-trade`
+}
+
+/**
+ * @summary Run risk approval check for a trade
+ */
+export const approveTradeRisk = async (tradeApprovalInput: TradeApprovalInput, options?: RequestInit): Promise<TradeApprovalResult> => {
+
+  return customFetch<TradeApprovalResult>(getApproveTradeRiskUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      tradeApprovalInput,)
+  }
+);}
+
+
+
+
+export const getApproveTradeRiskMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveTradeRisk>>, TError,{data: BodyType<TradeApprovalInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof approveTradeRisk>>, TError,{data: BodyType<TradeApprovalInput>}, TContext> => {
+
+const mutationKey = ['approveTradeRisk'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof approveTradeRisk>>, {data: BodyType<TradeApprovalInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  approveTradeRisk(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ApproveTradeRiskMutationResult = NonNullable<Awaited<ReturnType<typeof approveTradeRisk>>>
+    export type ApproveTradeRiskMutationBody = BodyType<TradeApprovalInput>
+    export type ApproveTradeRiskMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Run risk approval check for a trade
+ */
+export const useApproveTradeRisk = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveTradeRisk>>, TError,{data: BodyType<TradeApprovalInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof approveTradeRisk>>,
+        TError,
+        {data: BodyType<TradeApprovalInput>},
+        TContext
+      > => {
+      return useMutation(getApproveTradeRiskMutationOptions(options));
+    }
+
+export const getGetRiskReportUrl = () => {
+
+
+
+
+  return `/api/risk/report`
+}
+
+/**
+ * @summary Get risk report summary
+ */
+export const getRiskReport = async ( options?: RequestInit): Promise<RiskReport> => {
+
+  return customFetch<RiskReport>(getGetRiskReportUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetRiskReportQueryKey = () => {
+    return [
+    `/api/risk/report`
+    ] as const;
+    }
+
+
+export const getGetRiskReportQueryOptions = <TData = Awaited<ReturnType<typeof getRiskReport>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRiskReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetRiskReportQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRiskReport>>> = ({ signal }) => getRiskReport({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getRiskReport>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetRiskReportQueryResult = NonNullable<Awaited<ReturnType<typeof getRiskReport>>>
+export type GetRiskReportQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get risk report summary
+ */
+
+export function useGetRiskReport<TData = Awaited<ReturnType<typeof getRiskReport>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRiskReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetRiskReportQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getListExperimentsUrl = () => {
 

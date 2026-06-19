@@ -395,6 +395,177 @@ export interface AiFeedbackInput {
   lesson?: string;
 }
 
+export interface RiskDashboard {
+  riskScore: number;
+  accountSafety: string;
+  totalExposure: number;
+  exposurePct: number;
+  dailyPnl: number;
+  dailyLimitPct: number;
+  dailyUsedPct: number;
+  openPositions: number;
+  drawdown: number;
+  peakValue: number;
+  currentValue: number;
+  leverage: number;
+  /** @nullable */
+  liquidationBuffer?: number | null;
+  varAmount: number;
+  varConfidence: number;
+  stopLossRate: number;
+  concentrationRisk: number;
+  alertCount: number;
+}
+
+export interface PositionRiskItem {
+  id: number;
+  symbol: string;
+  side: string;
+  entryPrice: number;
+  currentPrice: number;
+  stopLoss: number;
+  stopDistance: number;
+  stopDistancePct: number;
+  quantity: number;
+  positionValue: number;
+  maxLoss: number;
+  riskPct: number;
+  liquidationPrice: number;
+  liquidationBuffer: number;
+  hasStopLoss: boolean;
+}
+
+export interface RiskVar {
+  historicalVar95: number;
+  historicalVar99: number;
+  simulationVar95: number;
+  simulationVar99: number;
+  expectedShortfall95: number;
+  expectedShortfall99: number;
+  portfolioVolatility: number;
+  dailyVar: number;
+  weeklyVar: number;
+  monthlyVar: number;
+}
+
+export type RiskDrawdownHistoryItem = {
+  date?: string;
+  value?: number;
+  drawdownPct?: number;
+};
+
+export interface RiskDrawdown {
+  peakValue: number;
+  currentValue: number;
+  drawdownAmount: number;
+  drawdownPct: number;
+  maxDrawdownPct: number;
+  recoveryNeeded: number;
+  status: string;
+  history: RiskDrawdownHistoryItem[];
+}
+
+export interface RiskLeverage {
+  currentLeverage: number;
+  recommendedLeverage: number;
+  maxLeverage: number;
+  marginUsed: number;
+  marginAvailable: number;
+  marginUsedPct: number;
+  /** @nullable */
+  liquidationDistance?: number | null;
+  status: string;
+}
+
+export type RiskAiAdvisorAlertsItem = {
+  severity?: string;
+  message?: string;
+};
+
+export type RiskAiAdvisorPositionAdviceItem = {
+  symbol?: string;
+  advice?: string;
+  action?: string;
+};
+
+export interface RiskAiAdvisor {
+  overallAssessment: string;
+  riskLevel: string;
+  confidence: number;
+  alerts: RiskAiAdvisorAlertsItem[];
+  recommendations: string[];
+  positionAdvice: RiskAiAdvisorPositionAdviceItem[];
+  generatedAt: string;
+}
+
+export interface RiskRule {
+  id: number;
+  rule: string;
+  category: string;
+  active: boolean;
+  /** @nullable */
+  phase?: string | null;
+}
+
+export interface RiskAlert {
+  id: number;
+  type: string;
+  severity: string;
+  message: string;
+  /** @nullable */
+  detail?: string | null;
+  resolved: boolean;
+  createdAt: string;
+}
+
+export interface StressTestResult {
+  name: string;
+  description: string;
+  marketMove: number;
+  portfolioMove: number;
+  impact: number;
+  newPortfolioValue: number;
+  survivable: boolean;
+  severity: string;
+}
+
+export interface TradeApprovalInput {
+  symbol: string;
+  side: string;
+  requestedSize: number;
+  entry?: number;
+  stopLoss?: number;
+  aiConfidence?: number;
+  account?: number;
+}
+
+export interface TradeApprovalResult {
+  decision: string;
+  approvedSize: number;
+  reason: string;
+  issues: string[];
+  riskScore: number;
+  riskPct: number;
+  positionValue: number;
+}
+
+export type RiskReportSummary = {
+  riskScore?: number;
+  totalTrades?: number;
+  winRate?: number;
+  maxDrawdown?: number;
+  avgExposure?: number;
+  totalPnl?: number;
+};
+
+export interface RiskReport {
+  period: string;
+  generatedAt: string;
+  summary: RiskReportSummary;
+  topRisks: string[];
+  improvements: string[];
+}
+
 export interface RiskCalcInput {
   account: number;
   riskPercent: number;

@@ -961,6 +961,228 @@ export const CalculateRiskResponse = zod.object({
 
 
 /**
+ * @summary Get full risk dashboard metrics
+ */
+export const GetRiskDashboardResponse = zod.object({
+  "riskScore": zod.number(),
+  "accountSafety": zod.string(),
+  "totalExposure": zod.number(),
+  "exposurePct": zod.number(),
+  "dailyPnl": zod.number(),
+  "dailyLimitPct": zod.number(),
+  "dailyUsedPct": zod.number(),
+  "openPositions": zod.number(),
+  "drawdown": zod.number(),
+  "peakValue": zod.number(),
+  "currentValue": zod.number(),
+  "leverage": zod.number(),
+  "liquidationBuffer": zod.number().nullish(),
+  "varAmount": zod.number(),
+  "varConfidence": zod.number(),
+  "stopLossRate": zod.number(),
+  "concentrationRisk": zod.number(),
+  "alertCount": zod.number()
+})
+
+
+/**
+ * @summary Get per-position risk breakdown
+ */
+export const GetRiskPositionsResponseItem = zod.object({
+  "id": zod.number(),
+  "symbol": zod.string(),
+  "side": zod.string(),
+  "entryPrice": zod.number(),
+  "currentPrice": zod.number(),
+  "stopLoss": zod.number(),
+  "stopDistance": zod.number(),
+  "stopDistancePct": zod.number(),
+  "quantity": zod.number(),
+  "positionValue": zod.number(),
+  "maxLoss": zod.number(),
+  "riskPct": zod.number(),
+  "liquidationPrice": zod.number(),
+  "liquidationBuffer": zod.number(),
+  "hasStopLoss": zod.boolean()
+})
+export const GetRiskPositionsResponse = zod.array(GetRiskPositionsResponseItem)
+
+
+/**
+ * @summary Get Value at Risk and Expected Shortfall
+ */
+export const GetRiskVarResponse = zod.object({
+  "historicalVar95": zod.number(),
+  "historicalVar99": zod.number(),
+  "simulationVar95": zod.number(),
+  "simulationVar99": zod.number(),
+  "expectedShortfall95": zod.number(),
+  "expectedShortfall99": zod.number(),
+  "portfolioVolatility": zod.number(),
+  "dailyVar": zod.number(),
+  "weeklyVar": zod.number(),
+  "monthlyVar": zod.number()
+})
+
+
+/**
+ * @summary Get drawdown tracking and history
+ */
+export const GetRiskDrawdownResponse = zod.object({
+  "peakValue": zod.number(),
+  "currentValue": zod.number(),
+  "drawdownAmount": zod.number(),
+  "drawdownPct": zod.number(),
+  "maxDrawdownPct": zod.number(),
+  "recoveryNeeded": zod.number(),
+  "status": zod.string(),
+  "history": zod.array(zod.object({
+  "date": zod.string().optional(),
+  "value": zod.number().optional(),
+  "drawdownPct": zod.number().optional()
+}))
+})
+
+
+/**
+ * @summary Get leverage and margin monitoring
+ */
+export const GetRiskLeverageResponse = zod.object({
+  "currentLeverage": zod.number(),
+  "recommendedLeverage": zod.number(),
+  "maxLeverage": zod.number(),
+  "marginUsed": zod.number(),
+  "marginAvailable": zod.number(),
+  "marginUsedPct": zod.number(),
+  "liquidationDistance": zod.number().nullish(),
+  "status": zod.string()
+})
+
+
+/**
+ * @summary Get AI risk advisor analysis
+ */
+export const GetRiskAiAdvisorResponse = zod.object({
+  "overallAssessment": zod.string(),
+  "riskLevel": zod.string(),
+  "confidence": zod.number(),
+  "alerts": zod.array(zod.object({
+  "severity": zod.string().optional(),
+  "message": zod.string().optional()
+})),
+  "recommendations": zod.array(zod.string()),
+  "positionAdvice": zod.array(zod.object({
+  "symbol": zod.string().optional(),
+  "advice": zod.string().optional(),
+  "action": zod.string().optional()
+})),
+  "generatedAt": zod.string()
+})
+
+
+/**
+ * @summary List all active risk rules
+ */
+export const ListRiskRulesResponseItem = zod.object({
+  "id": zod.number(),
+  "rule": zod.string(),
+  "category": zod.string(),
+  "active": zod.boolean(),
+  "phase": zod.string().nullish()
+})
+export const ListRiskRulesResponse = zod.array(ListRiskRulesResponseItem)
+
+
+/**
+ * @summary List active unresolved risk alerts
+ */
+export const ListRiskAlertsResponseItem = zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "severity": zod.string(),
+  "message": zod.string(),
+  "detail": zod.string().nullish(),
+  "resolved": zod.boolean(),
+  "createdAt": zod.string()
+})
+export const ListRiskAlertsResponse = zod.array(ListRiskAlertsResponseItem)
+
+
+/**
+ * @summary List full risk event history
+ */
+export const ListRiskHistoryResponseItem = zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "severity": zod.string(),
+  "message": zod.string(),
+  "detail": zod.string().nullish(),
+  "resolved": zod.boolean(),
+  "createdAt": zod.string()
+})
+export const ListRiskHistoryResponse = zod.array(ListRiskHistoryResponseItem)
+
+
+/**
+ * @summary Run stress test scenarios
+ */
+export const GetRiskStressTestResponseItem = zod.object({
+  "name": zod.string(),
+  "description": zod.string(),
+  "marketMove": zod.number(),
+  "portfolioMove": zod.number(),
+  "impact": zod.number(),
+  "newPortfolioValue": zod.number(),
+  "survivable": zod.boolean(),
+  "severity": zod.string()
+})
+export const GetRiskStressTestResponse = zod.array(GetRiskStressTestResponseItem)
+
+
+/**
+ * @summary Run risk approval check for a trade
+ */
+export const ApproveTradeRiskBody = zod.object({
+  "symbol": zod.string(),
+  "side": zod.string(),
+  "requestedSize": zod.number(),
+  "entry": zod.number().optional(),
+  "stopLoss": zod.number().optional(),
+  "aiConfidence": zod.number().optional(),
+  "account": zod.number().optional()
+})
+
+export const ApproveTradeRiskResponse = zod.object({
+  "decision": zod.string(),
+  "approvedSize": zod.number(),
+  "reason": zod.string(),
+  "issues": zod.array(zod.string()),
+  "riskScore": zod.number(),
+  "riskPct": zod.number(),
+  "positionValue": zod.number()
+})
+
+
+/**
+ * @summary Get risk report summary
+ */
+export const GetRiskReportResponse = zod.object({
+  "period": zod.string(),
+  "generatedAt": zod.string(),
+  "summary": zod.object({
+  "riskScore": zod.number().optional(),
+  "totalTrades": zod.number().optional(),
+  "winRate": zod.number().optional(),
+  "maxDrawdown": zod.number().optional(),
+  "avgExposure": zod.number().optional(),
+  "totalPnl": zod.number().optional()
+}),
+  "topRisks": zod.array(zod.string()),
+  "improvements": zod.array(zod.string())
+})
+
+
+/**
  * @summary List strategy experiments
  */
 export const ListExperimentsResponseItem = zod.object({

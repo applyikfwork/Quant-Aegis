@@ -739,19 +739,4 @@ router.put("/paper-trades/:id", async (req, res): Promise<void> => {
   res.json(data);
 });
 
-// ─── RISK CALCULATOR ──────────────────────────────────────────────────────────
-router.post("/risk/calculate", async (req, res): Promise<void> => {
-  const { account, riskPercent, entry, stopLoss } = req.body;
-  const riskAmount = account * (riskPercent / 100);
-  const stopDistance = Math.abs(entry - stopLoss);
-  const positionSize = stopDistance > 0 ? riskAmount / stopDistance : 0;
-  const riskReward = stopDistance > 0 ? (entry * 0.05) / stopDistance : 0;
-  res.json({
-    positionSize: Math.round(positionSize * 10000) / 10000,
-    riskAmount: Math.round(riskAmount * 100) / 100,
-    stopDistance: Math.round(stopDistance * 100) / 100,
-    riskReward: Math.round(riskReward * 100) / 100,
-  });
-});
-
 export default router;
