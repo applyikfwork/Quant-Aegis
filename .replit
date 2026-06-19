@@ -45,8 +45,8 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "PORT=8081 BASE_PATH=/ pnpm --filter @workspace/aegis-quant run dev"
-waitForPort = 8081
+args = "PORT=5000 BASE_PATH=/ pnpm --filter @workspace/aegis-quant run dev"
+waitForPort = 5000
 
 [agent]
 stack = "BEST_EFFORT_FALLBACK"
@@ -75,10 +75,10 @@ externalPort = 3002
 localPort = 23855
 externalPort = 3000
 
+[[ports]]
+localPort = 5000
+externalPort = 80
+
 [userenv]
 
 [userenv.shared]
-VITE_SUPABASE_URL = "PLACEHOLDER_URL"
-VITE_SUPABASE_ANON_KEY = "PLACEHOLDER_KEY"
-BYBIT_API_KEY = "o6yP0jcKw4RjwvEeu8"
-BYBIT_API_SECRET = "ThaZJ8Pxlnmd3lcWmwslbn0fic76RoeuddRG"
