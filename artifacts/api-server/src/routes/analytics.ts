@@ -1,10 +1,17 @@
 import { Router, type IRouter } from "express";
-import { supabase } from "../lib/supabase";
+import { supabase, isOfflineMode } from "../lib/supabase";
 import { GetDailyPerformanceQueryParams } from "@workspace/api-zod";
 
 const router: IRouter = Router();
 
+const OFFLINE_PERFORMANCE = {
+  totalTrades: 0, openTrades: 0, closedTrades: 0, wins: 0, losses: 0,
+  winRate: 0, totalPnl: 0, avgWin: 0, avgLoss: 0, profitFactor: 0,
+  maxDrawdown: 0, sharpeRatio: 0, expectancy: 0,
+};
+
 router.get("/analytics/performance", async (_req, res): Promise<void> => {
+  if (isOfflineMode) { res.json(OFFLINE_PERFORMANCE); return; }
   const [{ data: allTrades }, { data: openTrades }] = await Promise.all([
     supabase.from("trades").select("profit_loss, profit_percent, entry_time").eq("status", "closed").order("entry_time"),
     supabase.from("trades").select("id").eq("status", "open"),
@@ -50,6 +57,7 @@ router.get("/analytics/performance", async (_req, res): Promise<void> => {
 });
 
 router.get("/analytics/daily", async (req, res): Promise<void> => {
+  if (isOfflineMode) { res.json([]); return; }
   const query = GetDailyPerformanceQueryParams.safeParse(req.query);
   const days = query.success ? (query.data.days ?? 30) : 30;
   const since = new Date();
@@ -89,6 +97,7 @@ router.get("/analytics/daily", async (req, res): Promise<void> => {
 });
 
 router.get("/analytics/strategy-comparison", async (_req, res): Promise<void> => {
+  if (isOfflineMode) { res.json([]); return; }
   const [{ data: strategies }, { data: trades }] = await Promise.all([
     supabase.from("strategies").select("*"),
     supabase.from("trades").select("strategy_id, profit_loss").eq("status", "closed"),

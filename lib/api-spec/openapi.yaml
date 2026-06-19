@@ -17,6 +17,8 @@ tags:
     description: Trading signals
   - name: trades
     description: Trade management
+  - name: portfolio
+    description: Portfolio management - holdings, allocation, risk, AI analysis
   - name: journal
     description: Trade journal - psychology, AI review, events, mistakes
   - name: analytics
@@ -590,6 +592,91 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TradeMistake"
+
+  # ── PORTFOLIO ────────────────────────────────────────────────────────────────
+  /portfolio/summary:
+    get:
+      operationId: getPortfolioSummary
+      tags: [portfolio]
+      summary: Get portfolio summary - total value, cash, equity, PnL
+      responses:
+        "200":
+          description: Portfolio summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortfolioSummary"
+
+  /portfolio/holdings:
+    get:
+      operationId: getPortfolioHoldings
+      tags: [portfolio]
+      summary: Get aggregated asset holdings
+      responses:
+        "200":
+          description: Portfolio holdings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Holding"
+
+  /portfolio/allocation:
+    get:
+      operationId: getPortfolioAllocation
+      tags: [portfolio]
+      summary: Get asset allocation breakdown
+      responses:
+        "200":
+          description: Allocation data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AllocationItem"
+
+  /portfolio/risk:
+    get:
+      operationId: getPortfolioRisk
+      tags: [portfolio]
+      summary: Get portfolio risk metrics and exposure
+      responses:
+        "200":
+          description: Risk metrics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortfolioRisk"
+
+  /portfolio/ai-analysis:
+    get:
+      operationId: getPortfolioAiAnalysis
+      tags: [portfolio]
+      summary: Get AI portfolio analysis and recommendations
+      responses:
+        "200":
+          description: AI analysis
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortfolioAiAnalysis"
+
+  /portfolio/stress-test:
+    get:
+      operationId: getPortfolioStressTest
+      tags: [portfolio]
+      summary: Get stress test scenarios
+      responses:
+        "200":
+          description: Stress test results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StressTestScenario"
 
   # ── ANALYTICS ────────────────────────────────────────────────────────────────
   /analytics/performance:
@@ -1553,6 +1640,100 @@ components:
           type: string
         notes:
           type: string
+
+    # ── PORTFOLIO ────────────────────────────────────────────────────────────────
+    PortfolioSummary:
+      type: object
+      required: [totalValue, baseCapital, realizedPnl, unrealizedPnl, totalPnl, totalReturn, dailyPnl, freeCapital, usedCapital, openPositions, closedTrades, winRate, healthScore, riskLevel]
+      properties:
+        totalValue: { type: number }
+        baseCapital: { type: number }
+        realizedPnl: { type: number }
+        unrealizedPnl: { type: number }
+        totalPnl: { type: number }
+        totalReturn: { type: number }
+        dailyPnl: { type: number }
+        freeCapital: { type: number }
+        usedCapital: { type: number }
+        openPositions: { type: integer }
+        closedTrades: { type: integer }
+        winRate: { type: number }
+        healthScore: { type: integer }
+        riskLevel: { type: string }
+
+    Holding:
+      type: object
+      required: [symbol, side, quantity, averageCost, currentPrice, marketValue, totalCost, unrealizedPnl, unrealizedPnlPct, allocationPct, riskContrib, trades]
+      properties:
+        symbol: { type: string }
+        side: { type: string }
+        quantity: { type: number }
+        averageCost: { type: number }
+        currentPrice: { type: number }
+        marketValue: { type: number }
+        totalCost: { type: number }
+        unrealizedPnl: { type: number }
+        unrealizedPnlPct: { type: number }
+        allocationPct: { type: number }
+        riskContrib: { type: number }
+        trades: { type: integer }
+        stopLoss: { type: ["number", "null"] }
+        takeProfit: { type: ["number", "null"] }
+
+    AllocationItem:
+      type: object
+      required: [symbol, value, pct, category]
+      properties:
+        symbol: { type: string }
+        value: { type: number }
+        pct: { type: number }
+        category: { type: string }
+
+    PortfolioRisk:
+      type: object
+      required: [openExposure, exposurePct, concentrationRisk, portfolioVolatility, downsideVolatility, valueAtRisk95, leverageRisk, stopLossRate, maxDrawdown, openPositions, positionsWithoutStops, riskScore]
+      properties:
+        openExposure: { type: number }
+        exposurePct: { type: number }
+        concentrationRisk: { type: number }
+        portfolioVolatility: { type: number }
+        downsideVolatility: { type: number }
+        valueAtRisk95: { type: number }
+        leverageRisk: { type: number }
+        stopLossRate: { type: number }
+        maxDrawdown: { type: number }
+        openPositions: { type: integer }
+        positionsWithoutStops: { type: integer }
+        riskScore: { type: integer }
+
+    PortfolioAiAnalysis:
+      type: object
+      required: [summary, sentiment, recommendations, confidence, healthScore, generatedAt, metrics]
+      properties:
+        summary: { type: string }
+        sentiment: { type: string }
+        recommendations:
+          type: array
+          items: { type: string }
+        confidence: { type: integer }
+        healthScore: { type: integer }
+        generatedAt: { type: string }
+        metrics:
+          type: object
+          additionalProperties: true
+
+    StressTestScenario:
+      type: object
+      required: [name, description, marketMove, portfolioMove, impact, newPortfolioValue, survivable, severity]
+      properties:
+        name: { type: string }
+        description: { type: string }
+        marketMove: { type: number }
+        portfolioMove: { type: number }
+        impact: { type: number }
+        newPortfolioValue: { type: number }
+        survivable: { type: boolean }
+        severity: { type: string }
 
     # ── TRADE JOURNAL ────────────────────────────────────────────────────────────
     JournalStats:

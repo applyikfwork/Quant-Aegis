@@ -1,88 +1,55 @@
 import { Router, type IRouter } from "express";
 import { supabase } from "../lib/supabase";
-import { z } from "zod/v4";
 
 const router: IRouter = Router();
 
-const TradeEventInput = z.object({
-  eventType: z.string(),
-  description: z.string(),
-  oldValue: z.string().optional(),
-  newValue: z.string().optional(),
-  timestamp: z.string().optional(),
-});
+const toInt = (v: unknown): number | null => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+};
 
-const TradePsychologyInput = z.object({
-  preConfidence: z.number().int().min(0).max(100).optional(),
-  preFear: z.number().int().min(0).max(100).optional(),
-  preStress: z.number().int().min(0).max(100).optional(),
-  preFocus: z.number().int().min(0).max(100).optional(),
-  preEmotion: z.string().optional(),
-  preNotes: z.string().optional(),
-  postSatisfaction: z.number().int().min(0).max(100).optional(),
-  postRegret: z.number().int().min(0).max(100).optional(),
-  postConfidenceChange: z.number().int().min(-100).max(100).optional(),
-  postLearning: z.string().optional(),
-  postNotes: z.string().optional(),
-});
+const toStr = (v: unknown): string | null =>
+  typeof v === "string" && v.trim().length > 0 ? v.trim() : null;
 
-const TradeReviewInput = z.object({
-  entryScore: z.number().int().min(0).max(100).optional(),
-  riskScore: z.number().int().min(0).max(100).optional(),
-  exitScore: z.number().int().min(0).max(100).optional(),
-  timingScore: z.number().int().min(0).max(100).optional(),
-  overallScore: z.number().int().min(0).max(100).optional(),
-  strengths: z.string().optional(),
-  weaknesses: z.string().optional(),
-  recommendations: z.string().optional(),
-  aiGenerated: z.boolean().optional(),
-});
+const toBool = (v: unknown): boolean | null =>
+  typeof v === "boolean" ? v : null;
 
-const TradeMistakeInput = z.object({
-  mistakeType: z.string(),
-  category: z.enum(["entry", "exit", "risk", "strategy", "psychology"]),
-  severity: z.enum(["low", "medium", "high", "critical"]).optional(),
-  description: z.string(),
-  solution: z.string().optional(),
-  aiDetected: z.boolean().optional(),
-});
-
-const TradeIdParam = z.object({ tradeId: z.coerce.number().int() });
+const parseTradeId = (params: Record<string, string>): number | null => {
+  const id = parseInt(params.tradeId ?? "", 10);
+  return Number.isFinite(id) ? id : null;
+};
 
 // ── JOURNAL STATS ─────────────────────────────────────────────────────────────
 router.get("/journal/stats", async (_req, res): Promise<void> => {
   const { data: trades, error } = await supabase
     .from("trades")
-    .select("id, status, profit_loss, profit_percent, ai_confidence, entry_time");
+    .select("id, status, profit_loss, profit_percent, ai_confidence");
 
   if (error) { res.status(500).json({ error: error.message }); return; }
 
-  const closed = (trades ?? []).filter(t => t.status === "closed");
-  const open = (trades ?? []).filter(t => t.status === "open");
+  const all = trades ?? [];
+  const closed = all.filter(t => t.status === "closed");
+  const open = all.filter(t => t.status === "open");
   const winners = closed.filter(t => (t.profit_loss ?? 0) > 0);
   const losers = closed.filter(t => (t.profit_loss ?? 0) <= 0);
   const totalPnl = closed.reduce((s, t) => s + (t.profit_loss ?? 0), 0);
   const winRate = closed.length > 0 ? (winners.length / closed.length) * 100 : 0;
 
   const avgWin = winners.length > 0
-    ? winners.reduce((s, t) => s + (t.profit_loss ?? 0), 0) / winners.length
-    : 0;
+    ? winners.reduce((s, t) => s + (t.profit_loss ?? 0), 0) / winners.length : 0;
   const avgLoss = losers.length > 0
-    ? Math.abs(losers.reduce((s, t) => s + (t.profit_loss ?? 0), 0) / losers.length)
-    : 0;
+    ? Math.abs(losers.reduce((s, t) => s + (t.profit_loss ?? 0), 0) / losers.length) : 0;
   const avgRR = avgLoss > 0 ? avgWin / avgLoss : 0;
 
-  const avgAiConf = trades && trades.length > 0
-    ? trades.filter(t => t.ai_confidence != null).reduce((s, t) => s + (t.ai_confidence ?? 0), 0) /
-      Math.max(1, trades.filter(t => t.ai_confidence != null).length)
-    : 0;
+  const confTrades = all.filter(t => t.ai_confidence != null);
+  const avgAiConf = confTrades.length > 0
+    ? confTrades.reduce((s, t) => s + (t.ai_confidence ?? 0), 0) / confTrades.length : 0;
 
   const { data: mistakes } = await supabase.from("trade_mistakes").select("id");
   const { data: reviews } = await supabase.from("trade_reviews").select("overall_score");
 
   const avgReviewScore = reviews && reviews.length > 0
-    ? reviews.reduce((s, r) => s + (r.overall_score ?? 0), 0) / reviews.length
-    : null;
+    ? Math.round(reviews.reduce((s, r) => s + (r.overall_score ?? 0), 0) / reviews.length) : null;
 
   const disciplineScore = Math.min(100, Math.round(
     winRate * 0.3 +
@@ -91,77 +58,61 @@ router.get("/journal/stats", async (_req, res): Promise<void> => {
   ));
 
   res.json({
-    totalTrades: trades?.length ?? 0,
-    openTrades: open.length,
-    closedTrades: closed.length,
-    winningTrades: winners.length,
-    losingTrades: losers.length,
+    totalTrades: all.length, openTrades: open.length, closedTrades: closed.length,
+    winningTrades: winners.length, losingTrades: losers.length,
     winRate: Math.round(winRate * 10) / 10,
     avgRR: Math.round(avgRR * 100) / 100,
     totalPnl: Math.round(totalPnl * 100) / 100,
     avgAiConfidence: Math.round(avgAiConf * 10) / 10,
     totalMistakes: mistakes?.length ?? 0,
-    avgReviewScore: avgReviewScore ? Math.round(avgReviewScore) : null,
+    avgReviewScore,
     disciplineScore,
   });
 });
 
 // ── TRADE EVENTS ──────────────────────────────────────────────────────────────
 router.get("/journal/events/:tradeId", async (req, res): Promise<void> => {
-  const params = TradeIdParam.safeParse(req.params);
-  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+  const tradeId = parseTradeId(req.params);
+  if (!tradeId) { res.status(400).json({ error: "Invalid tradeId" }); return; }
 
   const { data, error } = await supabase
-    .from("trade_events")
-    .select("*")
-    .eq("trade_id", params.data.tradeId)
-    .order("timestamp", { ascending: true });
+    .from("trade_events").select("*").eq("trade_id", tradeId).order("timestamp", { ascending: true });
 
   if (error) { res.status(500).json({ error: error.message }); return; }
-
   res.json((data ?? []).map(e => ({
     id: e.id, tradeId: e.trade_id, eventType: e.event_type,
-    description: e.description, oldValue: e.old_value, newValue: e.new_value,
-    timestamp: e.timestamp,
+    description: e.description, oldValue: e.old_value, newValue: e.new_value, timestamp: e.timestamp,
   })));
 });
 
 router.post("/journal/events/:tradeId", async (req, res): Promise<void> => {
-  const params = TradeIdParam.safeParse(req.params);
-  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
-  const parsed = TradeEventInput.safeParse(req.body);
-  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+  const tradeId = parseTradeId(req.params);
+  if (!tradeId) { res.status(400).json({ error: "Invalid tradeId" }); return; }
+  const body = req.body as Record<string, unknown>;
+  const eventType = toStr(body.eventType);
+  const description = toStr(body.description);
+  if (!eventType || !description) { res.status(400).json({ error: "eventType and description required" }); return; }
 
   const { data, error } = await supabase.from("trade_events").insert({
-    trade_id: params.data.tradeId,
-    event_type: parsed.data.eventType,
-    description: parsed.data.description,
-    old_value: parsed.data.oldValue ?? null,
-    new_value: parsed.data.newValue ?? null,
-    timestamp: parsed.data.timestamp ?? new Date().toISOString(),
+    trade_id: tradeId, event_type: eventType, description,
+    old_value: toStr(body.oldValue), new_value: toStr(body.newValue),
+    timestamp: toStr(body.timestamp) ?? new Date().toISOString(),
   }).select().single();
 
   if (error) { res.status(500).json({ error: error.message }); return; }
-
   res.status(201).json({
     id: data.id, tradeId: data.trade_id, eventType: data.event_type,
-    description: data.description, oldValue: data.old_value, newValue: data.new_value,
-    timestamp: data.timestamp,
+    description: data.description, oldValue: data.old_value, newValue: data.new_value, timestamp: data.timestamp,
   });
 });
 
 // ── TRADE PSYCHOLOGY ──────────────────────────────────────────────────────────
 router.get("/journal/psychology/:tradeId", async (req, res): Promise<void> => {
-  const params = TradeIdParam.safeParse(req.params);
-  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+  const tradeId = parseTradeId(req.params);
+  if (!tradeId) { res.status(400).json({ error: "Invalid tradeId" }); return; }
 
-  const { data, error } = await supabase
-    .from("trade_psychology")
-    .select("*")
-    .eq("trade_id", params.data.tradeId)
-    .single();
-
-  if (error || !data) { res.status(404).json({ error: "Psychology record not found" }); return; }
+  const { data, error } = await supabase.from("trade_psychology").select("*").eq("trade_id", tradeId).single();
+  if (error || !data) { res.status(404).json({ error: "Not found" }); return; }
 
   res.json({
     id: data.id, tradeId: data.trade_id,
@@ -176,44 +127,28 @@ router.get("/journal/psychology/:tradeId", async (req, res): Promise<void> => {
 });
 
 router.post("/journal/psychology/:tradeId", async (req, res): Promise<void> => {
-  const params = TradeIdParam.safeParse(req.params);
-  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
-  const parsed = TradePsychologyInput.safeParse(req.body);
-  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+  const tradeId = parseTradeId(req.params);
+  if (!tradeId) { res.status(400).json({ error: "Invalid tradeId" }); return; }
+  const b = req.body as Record<string, unknown>;
 
-  const record = {
-    trade_id: params.data.tradeId,
-    pre_confidence: parsed.data.preConfidence ?? null,
-    pre_fear: parsed.data.preFear ?? null,
-    pre_stress: parsed.data.preStress ?? null,
-    pre_focus: parsed.data.preFocus ?? null,
-    pre_emotion: parsed.data.preEmotion ?? null,
-    pre_notes: parsed.data.preNotes ?? null,
-    post_satisfaction: parsed.data.postSatisfaction ?? null,
-    post_regret: parsed.data.postRegret ?? null,
-    post_confidence_change: parsed.data.postConfidenceChange ?? null,
-    post_learning: parsed.data.postLearning ?? null,
-    post_notes: parsed.data.postNotes ?? null,
+  const record: Record<string, unknown> = {
+    trade_id: tradeId,
+    pre_confidence: toInt(b.preConfidence), pre_fear: toInt(b.preFear),
+    pre_stress: toInt(b.preStress), pre_focus: toInt(b.preFocus),
+    pre_emotion: toStr(b.preEmotion), pre_notes: toStr(b.preNotes),
+    post_satisfaction: toInt(b.postSatisfaction), post_regret: toInt(b.postRegret),
+    post_confidence_change: toInt(b.postConfidenceChange),
+    post_learning: toStr(b.postLearning), post_notes: toStr(b.postNotes),
     updated_at: new Date().toISOString(),
   };
 
-  const { data: existing } = await supabase
-    .from("trade_psychology").select("id").eq("trade_id", params.data.tradeId).single();
+  const { data: existing } = await supabase.from("trade_psychology").select("id").eq("trade_id", tradeId).single();
+  const q = existing
+    ? supabase.from("trade_psychology").update(record).eq("trade_id", tradeId).select().single()
+    : supabase.from("trade_psychology").insert(record).select().single();
 
-  let data: Record<string, unknown> | null = null;
-  let error: { message: string } | null = null;
-
-  if (existing) {
-    const result = await supabase.from("trade_psychology").update(record).eq("trade_id", params.data.tradeId).select().single();
-    data = result.data as Record<string, unknown> | null;
-    error = result.error;
-  } else {
-    const result = await supabase.from("trade_psychology").insert(record).select().single();
-    data = result.data as Record<string, unknown> | null;
-    error = result.error;
-  }
-
-  if (error || !data) { res.status(500).json({ error: error?.message ?? "Failed to save" }); return; }
+  const { data, error } = await q;
+  if (error || !data) { res.status(500).json({ error: error?.message ?? "Failed" }); return; }
 
   res.json({
     id: data.id, tradeId: data.trade_id,
@@ -229,16 +164,11 @@ router.post("/journal/psychology/:tradeId", async (req, res): Promise<void> => {
 
 // ── TRADE REVIEW ──────────────────────────────────────────────────────────────
 router.get("/journal/review/:tradeId", async (req, res): Promise<void> => {
-  const params = TradeIdParam.safeParse(req.params);
-  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+  const tradeId = parseTradeId(req.params);
+  if (!tradeId) { res.status(400).json({ error: "Invalid tradeId" }); return; }
 
-  const { data, error } = await supabase
-    .from("trade_reviews")
-    .select("*")
-    .eq("trade_id", params.data.tradeId)
-    .single();
-
-  if (error || !data) { res.status(404).json({ error: "Review not found" }); return; }
+  const { data, error } = await supabase.from("trade_reviews").select("*").eq("trade_id", tradeId).single();
+  if (error || !data) { res.status(404).json({ error: "Not found" }); return; }
 
   res.json({
     id: data.id, tradeId: data.trade_id,
@@ -251,86 +181,64 @@ router.get("/journal/review/:tradeId", async (req, res): Promise<void> => {
 });
 
 router.post("/journal/review/:tradeId", async (req, res): Promise<void> => {
-  const params = TradeIdParam.safeParse(req.params);
-  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
-  const parsed = TradeReviewInput.safeParse(req.body);
-  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+  const tradeId = parseTradeId(req.params);
+  if (!tradeId) { res.status(400).json({ error: "Invalid tradeId" }); return; }
+  const b = req.body as Record<string, unknown>;
 
-  const { data: trade } = await supabase.from("trades").select("*").eq("id", params.data.tradeId).single();
+  const { data: trade } = await supabase.from("trades").select("*").eq("id", tradeId).single();
+  const aiGenerated = toBool(b.aiGenerated) ?? true;
 
-  let entryScore = parsed.data.entryScore;
-  let riskScore = parsed.data.riskScore;
-  let exitScore = parsed.data.exitScore;
-  let timingScore = parsed.data.timingScore;
-  let overallScore = parsed.data.overallScore;
-  let strengths = parsed.data.strengths ?? null;
-  let weaknesses = parsed.data.weaknesses ?? null;
-  let recommendations = parsed.data.recommendations ?? null;
-  const aiGenerated = parsed.data.aiGenerated ?? true;
+  let entryScore = toInt(b.entryScore);
+  let riskScore = toInt(b.riskScore);
+  let exitScore = toInt(b.exitScore);
+  let timingScore = toInt(b.timingScore);
+  let overallScore = toInt(b.overallScore);
+  let strengths = toStr(b.strengths);
+  let weaknesses = toStr(b.weaknesses);
+  let recommendations = toStr(b.recommendations);
 
   if (trade && aiGenerated) {
     const pnlPct = trade.profit_percent ?? 0;
-    const hasStopLoss = trade.stop_loss != null;
-    const hasTakeProfit = trade.take_profit != null;
-    const aiConf = trade.ai_confidence ?? 70;
+    const hasStop = trade.stop_loss != null;
+    const hasTP = trade.take_profit != null;
+    const conf = trade.ai_confidence ?? 70;
 
-    entryScore = entryScore ?? Math.min(100, Math.round(60 + aiConf * 0.3 + (hasStopLoss ? 10 : 0)));
-    riskScore = riskScore ?? Math.min(100, Math.round((hasStopLoss ? 40 : 0) + (hasTakeProfit ? 30 : 0) + 30));
+    entryScore = entryScore ?? Math.min(100, Math.round(60 + conf * 0.3 + (hasStop ? 10 : 0)));
+    riskScore = riskScore ?? Math.min(100, (hasStop ? 40 : 0) + (hasTP ? 30 : 0) + 30);
     exitScore = exitScore ?? Math.min(100, Math.round(50 + pnlPct * 2));
-    timingScore = timingScore ?? Math.min(100, Math.round(65 + aiConf * 0.2));
+    timingScore = timingScore ?? Math.min(100, Math.round(65 + conf * 0.2));
     overallScore = overallScore ?? Math.round(
-      (entryScore ?? 70) * 0.25 +
-      (riskScore ?? 70) * 0.25 +
-      (exitScore ?? 70) * 0.20 +
-      (timingScore ?? 70) * 0.15 +
-      Math.min(100, aiConf + 10) * 0.15
+      entryScore * 0.25 + riskScore * 0.25 + exitScore * 0.20 + timingScore * 0.15 + Math.min(100, conf + 10) * 0.15
     );
 
-    const strengthsList: string[] = [];
-    const weaknessesList: string[] = [];
-    const recList: string[] = [];
+    const s: string[] = [], w: string[] = [], r: string[] = [];
+    if (hasStop) s.push("Stop loss was set, protecting downside risk");
+    if (hasTP) s.push("Take profit target defined before entry");
+    if (conf > 80) s.push(`High AI confidence (${conf.toFixed(0)}%) supported the decision`);
+    if (pnlPct > 0) s.push(`Profitable outcome: +${pnlPct.toFixed(2)}%`);
+    if (!hasStop) { w.push("No stop loss set — unlimited downside risk"); r.push("Always set a stop loss before entering a trade"); }
+    if (!hasTP) { w.push("No take profit defined"); r.push("Define take profit targets to remove emotion from exit decisions"); }
+    if (conf < 70) { w.push("Below-average AI confidence at entry"); r.push("Wait for AI confidence >75% before entering"); }
+    if (pnlPct < 0) { w.push(`Loss of ${pnlPct.toFixed(2)}%`); r.push("Review entry conditions against strategy criteria"); }
 
-    if (hasStopLoss) strengthsList.push("Stop loss was set, protecting downside risk");
-    if (hasTakeProfit) strengthsList.push("Take profit target defined before entry");
-    if (aiConf > 80) strengthsList.push(`High AI confidence (${aiConf.toFixed(0)}%) supported the decision`);
-    if (pnlPct > 0) strengthsList.push(`Profitable outcome: +${pnlPct.toFixed(2)}%`);
-    if (!hasStopLoss) { weaknessesList.push("No stop loss set — unlimited downside risk"); recList.push("Always set a stop loss before entering a trade"); }
-    if (!hasTakeProfit) { weaknessesList.push("No take profit defined — exit was discretionary"); recList.push("Define take profit targets to remove emotion from exit decisions"); }
-    if (aiConf < 70) { weaknessesList.push("Below-average AI confidence at entry"); recList.push("Consider waiting for higher AI confidence signals (>75%)"); }
-    if (pnlPct < 0) { weaknessesList.push(`Loss of ${pnlPct.toFixed(2)}% — review entry conditions`); recList.push("Analyze market conditions at entry — did they match strategy criteria?"); }
-
-    strengths = strengthsList.length > 0 ? strengthsList.join(". ") : "Followed basic trade execution process";
-    weaknesses = weaknessesList.length > 0 ? weaknessesList.join(". ") : "No major weaknesses detected";
-    recommendations = recList.length > 0 ? recList.join(". ") : "Continue following current strategy rules consistently";
+    strengths = s.length > 0 ? s.join(". ") : "Followed basic trade execution process";
+    weaknesses = w.length > 0 ? w.join(". ") : "No major weaknesses detected";
+    recommendations = r.length > 0 ? r.join(". ") : "Continue following current strategy rules consistently";
   }
 
-  const { data: existing } = await supabase.from("trade_reviews").select("id").eq("trade_id", params.data.tradeId).single();
-
-  const record = {
-    trade_id: params.data.tradeId,
-    entry_score: entryScore ?? null,
-    risk_score: riskScore ?? null,
-    exit_score: exitScore ?? null,
-    timing_score: timingScore ?? null,
-    overall_score: overallScore ?? null,
-    strengths, weaknesses, recommendations,
-    ai_generated: aiGenerated,
+  const record: Record<string, unknown> = {
+    trade_id: tradeId, entry_score: entryScore, risk_score: riskScore,
+    exit_score: exitScore, timing_score: timingScore, overall_score: overallScore,
+    strengths, weaknesses, recommendations, ai_generated: aiGenerated,
   };
 
-  let data: Record<string, unknown> | null = null;
-  let saveError: { message: string } | null = null;
+  const { data: existing } = await supabase.from("trade_reviews").select("id").eq("trade_id", tradeId).single();
+  const q = existing
+    ? supabase.from("trade_reviews").update(record).eq("trade_id", tradeId).select().single()
+    : supabase.from("trade_reviews").insert(record).select().single();
 
-  if (existing) {
-    const result = await supabase.from("trade_reviews").update(record).eq("trade_id", params.data.tradeId).select().single();
-    data = result.data as Record<string, unknown> | null;
-    saveError = result.error;
-  } else {
-    const result = await supabase.from("trade_reviews").insert(record).select().single();
-    data = result.data as Record<string, unknown> | null;
-    saveError = result.error;
-  }
-
-  if (saveError || !data) { res.status(500).json({ error: saveError?.message ?? "Failed to save review" }); return; }
+  const { data, error } = await q;
+  if (error || !data) { res.status(500).json({ error: error?.message ?? "Failed" }); return; }
 
   res.json({
     id: data.id, tradeId: data.trade_id,
@@ -344,15 +252,11 @@ router.post("/journal/review/:tradeId", async (req, res): Promise<void> => {
 
 // ── TRADE MISTAKES ────────────────────────────────────────────────────────────
 router.get("/journal/mistakes/:tradeId", async (req, res): Promise<void> => {
-  const params = TradeIdParam.safeParse(req.params);
-  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+  const tradeId = parseTradeId(req.params);
+  if (!tradeId) { res.status(400).json({ error: "Invalid tradeId" }); return; }
 
-  const { data, error } = await supabase
-    .from("trade_mistakes")
-    .select("*")
-    .eq("trade_id", params.data.tradeId)
-    .order("created_at", { ascending: false });
-
+  const { data, error } = await supabase.from("trade_mistakes").select("*")
+    .eq("trade_id", tradeId).order("created_at", { ascending: false });
   if (error) { res.status(500).json({ error: error.message }); return; }
 
   res.json((data ?? []).map(m => ({
@@ -363,23 +267,24 @@ router.get("/journal/mistakes/:tradeId", async (req, res): Promise<void> => {
 });
 
 router.post("/journal/mistakes/:tradeId", async (req, res): Promise<void> => {
-  const params = TradeIdParam.safeParse(req.params);
-  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
-  const parsed = TradeMistakeInput.safeParse(req.body);
-  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+  const tradeId = parseTradeId(req.params);
+  if (!tradeId) { res.status(400).json({ error: "Invalid tradeId" }); return; }
+  const b = req.body as Record<string, unknown>;
+  const mistakeType = toStr(b.mistakeType);
+  const description = toStr(b.description);
+  if (!mistakeType || !description) { res.status(400).json({ error: "mistakeType and description required" }); return; }
 
   const { data, error } = await supabase.from("trade_mistakes").insert({
-    trade_id: params.data.tradeId,
-    mistake_type: parsed.data.mistakeType,
-    category: parsed.data.category,
-    severity: parsed.data.severity ?? "medium",
-    description: parsed.data.description,
-    solution: parsed.data.solution ?? null,
-    ai_detected: parsed.data.aiDetected ?? false,
+    trade_id: tradeId,
+    mistake_type: mistakeType,
+    category: toStr(b.category) ?? "entry",
+    severity: toStr(b.severity) ?? "medium",
+    description,
+    solution: toStr(b.solution),
+    ai_detected: toBool(b.aiDetected) ?? false,
   }).select().single();
 
   if (error) { res.status(500).json({ error: error.message }); return; }
-
   res.status(201).json({
     id: data.id, tradeId: data.trade_id, mistakeType: data.mistake_type,
     category: data.category, severity: data.severity, description: data.description,

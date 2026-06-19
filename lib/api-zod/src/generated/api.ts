@@ -594,6 +594,110 @@ export const CreateTradeMistakeBody = zod.object({
 
 
 /**
+ * @summary Get portfolio summary - total value, cash, equity, PnL
+ */
+export const GetPortfolioSummaryResponse = zod.object({
+  "totalValue": zod.number(),
+  "baseCapital": zod.number(),
+  "realizedPnl": zod.number(),
+  "unrealizedPnl": zod.number(),
+  "totalPnl": zod.number(),
+  "totalReturn": zod.number(),
+  "dailyPnl": zod.number(),
+  "freeCapital": zod.number(),
+  "usedCapital": zod.number(),
+  "openPositions": zod.number(),
+  "closedTrades": zod.number(),
+  "winRate": zod.number(),
+  "healthScore": zod.number(),
+  "riskLevel": zod.string()
+})
+
+
+/**
+ * @summary Get aggregated asset holdings
+ */
+export const GetPortfolioHoldingsResponseItem = zod.object({
+  "symbol": zod.string(),
+  "side": zod.string(),
+  "quantity": zod.number(),
+  "averageCost": zod.number(),
+  "currentPrice": zod.number(),
+  "marketValue": zod.number(),
+  "totalCost": zod.number(),
+  "unrealizedPnl": zod.number(),
+  "unrealizedPnlPct": zod.number(),
+  "allocationPct": zod.number(),
+  "riskContrib": zod.number(),
+  "trades": zod.number(),
+  "stopLoss": zod.number().nullish(),
+  "takeProfit": zod.number().nullish()
+})
+export const GetPortfolioHoldingsResponse = zod.array(GetPortfolioHoldingsResponseItem)
+
+
+/**
+ * @summary Get asset allocation breakdown
+ */
+export const GetPortfolioAllocationResponseItem = zod.object({
+  "symbol": zod.string(),
+  "value": zod.number(),
+  "pct": zod.number(),
+  "category": zod.string()
+})
+export const GetPortfolioAllocationResponse = zod.array(GetPortfolioAllocationResponseItem)
+
+
+/**
+ * @summary Get portfolio risk metrics and exposure
+ */
+export const GetPortfolioRiskResponse = zod.object({
+  "openExposure": zod.number(),
+  "exposurePct": zod.number(),
+  "concentrationRisk": zod.number(),
+  "portfolioVolatility": zod.number(),
+  "downsideVolatility": zod.number(),
+  "valueAtRisk95": zod.number(),
+  "leverageRisk": zod.number(),
+  "stopLossRate": zod.number(),
+  "maxDrawdown": zod.number(),
+  "openPositions": zod.number(),
+  "positionsWithoutStops": zod.number(),
+  "riskScore": zod.number()
+})
+
+
+/**
+ * @summary Get AI portfolio analysis and recommendations
+ */
+export const GetPortfolioAiAnalysisResponse = zod.object({
+  "summary": zod.string(),
+  "sentiment": zod.string(),
+  "recommendations": zod.array(zod.string()),
+  "confidence": zod.number(),
+  "healthScore": zod.number(),
+  "generatedAt": zod.string(),
+  "metrics": zod.record(zod.string(), zod.unknown())
+})
+
+
+/**
+ * @summary Get stress test scenarios
+ */
+export const GetPortfolioStressTestResponseItem = zod.object({
+  "name": zod.string(),
+  "description": zod.string(),
+  "marketMove": zod.number(),
+  "portfolioMove": zod.number(),
+  "impact": zod.number(),
+  "newPortfolioValue": zod.number(),
+  "survivable": zod.boolean(),
+  "severity": zod.string()
+})
+export const GetPortfolioStressTestResponse = zod.array(GetPortfolioStressTestResponseItem)
+
+
+/**
  * @summary Get overall performance metrics
  */
 export const GetPerformanceResponse = zod.object({

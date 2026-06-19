@@ -25,6 +25,7 @@ import type {
   AiDecision,
   AiFeedback,
   AiFeedbackInput,
+  AllocationItem,
   BacktestInput,
   BacktestResult,
   Candle,
@@ -36,6 +37,7 @@ import type {
   GetRecentActivityParams,
   GetSystemLogsParams,
   HealthStatus,
+  Holding,
   Indicators,
   JournalStats,
   ListSignalsParams,
@@ -44,6 +46,9 @@ import type {
   PaperTrade,
   PaperTradeInput,
   PerformanceSummary,
+  PortfolioAiAnalysis,
+  PortfolioRisk,
+  PortfolioSummary,
   RiskCalcInput,
   RiskCalcResult,
   Signal,
@@ -52,6 +57,7 @@ import type {
   StrategyInput,
   StrategyPerf,
   StrategyUpdate,
+  StressTestScenario,
   SystemLog,
   SystemStatus,
   Trade,
@@ -2122,6 +2128,468 @@ export const useCreateTradeMistake = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getCreateTradeMistakeMutationOptions(options));
     }
+
+export const getGetPortfolioSummaryUrl = () => {
+
+
+
+
+  return `/api/portfolio/summary`
+}
+
+/**
+ * @summary Get portfolio summary - total value, cash, equity, PnL
+ */
+export const getPortfolioSummary = async ( options?: RequestInit): Promise<PortfolioSummary> => {
+
+  return customFetch<PortfolioSummary>(getGetPortfolioSummaryUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPortfolioSummaryQueryKey = () => {
+    return [
+    `/api/portfolio/summary`
+    ] as const;
+    }
+
+
+export const getGetPortfolioSummaryQueryOptions = <TData = Awaited<ReturnType<typeof getPortfolioSummary>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPortfolioSummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPortfolioSummaryQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPortfolioSummary>>> = ({ signal }) => getPortfolioSummary({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPortfolioSummary>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPortfolioSummaryQueryResult = NonNullable<Awaited<ReturnType<typeof getPortfolioSummary>>>
+export type GetPortfolioSummaryQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get portfolio summary - total value, cash, equity, PnL
+ */
+
+export function useGetPortfolioSummary<TData = Awaited<ReturnType<typeof getPortfolioSummary>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPortfolioSummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPortfolioSummaryQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetPortfolioHoldingsUrl = () => {
+
+
+
+
+  return `/api/portfolio/holdings`
+}
+
+/**
+ * @summary Get aggregated asset holdings
+ */
+export const getPortfolioHoldings = async ( options?: RequestInit): Promise<Holding[]> => {
+
+  return customFetch<Holding[]>(getGetPortfolioHoldingsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPortfolioHoldingsQueryKey = () => {
+    return [
+    `/api/portfolio/holdings`
+    ] as const;
+    }
+
+
+export const getGetPortfolioHoldingsQueryOptions = <TData = Awaited<ReturnType<typeof getPortfolioHoldings>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPortfolioHoldings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPortfolioHoldingsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPortfolioHoldings>>> = ({ signal }) => getPortfolioHoldings({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPortfolioHoldings>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPortfolioHoldingsQueryResult = NonNullable<Awaited<ReturnType<typeof getPortfolioHoldings>>>
+export type GetPortfolioHoldingsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get aggregated asset holdings
+ */
+
+export function useGetPortfolioHoldings<TData = Awaited<ReturnType<typeof getPortfolioHoldings>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPortfolioHoldings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPortfolioHoldingsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetPortfolioAllocationUrl = () => {
+
+
+
+
+  return `/api/portfolio/allocation`
+}
+
+/**
+ * @summary Get asset allocation breakdown
+ */
+export const getPortfolioAllocation = async ( options?: RequestInit): Promise<AllocationItem[]> => {
+
+  return customFetch<AllocationItem[]>(getGetPortfolioAllocationUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPortfolioAllocationQueryKey = () => {
+    return [
+    `/api/portfolio/allocation`
+    ] as const;
+    }
+
+
+export const getGetPortfolioAllocationQueryOptions = <TData = Awaited<ReturnType<typeof getPortfolioAllocation>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPortfolioAllocation>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPortfolioAllocationQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPortfolioAllocation>>> = ({ signal }) => getPortfolioAllocation({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPortfolioAllocation>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPortfolioAllocationQueryResult = NonNullable<Awaited<ReturnType<typeof getPortfolioAllocation>>>
+export type GetPortfolioAllocationQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get asset allocation breakdown
+ */
+
+export function useGetPortfolioAllocation<TData = Awaited<ReturnType<typeof getPortfolioAllocation>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPortfolioAllocation>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPortfolioAllocationQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetPortfolioRiskUrl = () => {
+
+
+
+
+  return `/api/portfolio/risk`
+}
+
+/**
+ * @summary Get portfolio risk metrics and exposure
+ */
+export const getPortfolioRisk = async ( options?: RequestInit): Promise<PortfolioRisk> => {
+
+  return customFetch<PortfolioRisk>(getGetPortfolioRiskUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPortfolioRiskQueryKey = () => {
+    return [
+    `/api/portfolio/risk`
+    ] as const;
+    }
+
+
+export const getGetPortfolioRiskQueryOptions = <TData = Awaited<ReturnType<typeof getPortfolioRisk>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPortfolioRisk>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPortfolioRiskQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPortfolioRisk>>> = ({ signal }) => getPortfolioRisk({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPortfolioRisk>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPortfolioRiskQueryResult = NonNullable<Awaited<ReturnType<typeof getPortfolioRisk>>>
+export type GetPortfolioRiskQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get portfolio risk metrics and exposure
+ */
+
+export function useGetPortfolioRisk<TData = Awaited<ReturnType<typeof getPortfolioRisk>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPortfolioRisk>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPortfolioRiskQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetPortfolioAiAnalysisUrl = () => {
+
+
+
+
+  return `/api/portfolio/ai-analysis`
+}
+
+/**
+ * @summary Get AI portfolio analysis and recommendations
+ */
+export const getPortfolioAiAnalysis = async ( options?: RequestInit): Promise<PortfolioAiAnalysis> => {
+
+  return customFetch<PortfolioAiAnalysis>(getGetPortfolioAiAnalysisUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPortfolioAiAnalysisQueryKey = () => {
+    return [
+    `/api/portfolio/ai-analysis`
+    ] as const;
+    }
+
+
+export const getGetPortfolioAiAnalysisQueryOptions = <TData = Awaited<ReturnType<typeof getPortfolioAiAnalysis>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPortfolioAiAnalysis>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPortfolioAiAnalysisQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPortfolioAiAnalysis>>> = ({ signal }) => getPortfolioAiAnalysis({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPortfolioAiAnalysis>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPortfolioAiAnalysisQueryResult = NonNullable<Awaited<ReturnType<typeof getPortfolioAiAnalysis>>>
+export type GetPortfolioAiAnalysisQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get AI portfolio analysis and recommendations
+ */
+
+export function useGetPortfolioAiAnalysis<TData = Awaited<ReturnType<typeof getPortfolioAiAnalysis>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPortfolioAiAnalysis>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPortfolioAiAnalysisQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetPortfolioStressTestUrl = () => {
+
+
+
+
+  return `/api/portfolio/stress-test`
+}
+
+/**
+ * @summary Get stress test scenarios
+ */
+export const getPortfolioStressTest = async ( options?: RequestInit): Promise<StressTestScenario[]> => {
+
+  return customFetch<StressTestScenario[]>(getGetPortfolioStressTestUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPortfolioStressTestQueryKey = () => {
+    return [
+    `/api/portfolio/stress-test`
+    ] as const;
+    }
+
+
+export const getGetPortfolioStressTestQueryOptions = <TData = Awaited<ReturnType<typeof getPortfolioStressTest>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPortfolioStressTest>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPortfolioStressTestQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPortfolioStressTest>>> = ({ signal }) => getPortfolioStressTest({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPortfolioStressTest>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPortfolioStressTestQueryResult = NonNullable<Awaited<ReturnType<typeof getPortfolioStressTest>>>
+export type GetPortfolioStressTestQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get stress test scenarios
+ */
+
+export function useGetPortfolioStressTest<TData = Awaited<ReturnType<typeof getPortfolioStressTest>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPortfolioStressTest>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPortfolioStressTestQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getGetPerformanceUrl = () => {
 

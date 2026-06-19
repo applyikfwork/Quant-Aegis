@@ -459,6 +459,87 @@ export interface ExperimentInput {
   notes?: string;
 }
 
+export interface PortfolioSummary {
+  totalValue: number;
+  baseCapital: number;
+  realizedPnl: number;
+  unrealizedPnl: number;
+  totalPnl: number;
+  totalReturn: number;
+  dailyPnl: number;
+  freeCapital: number;
+  usedCapital: number;
+  openPositions: number;
+  closedTrades: number;
+  winRate: number;
+  healthScore: number;
+  riskLevel: string;
+}
+
+export interface Holding {
+  symbol: string;
+  side: string;
+  quantity: number;
+  averageCost: number;
+  currentPrice: number;
+  marketValue: number;
+  totalCost: number;
+  unrealizedPnl: number;
+  unrealizedPnlPct: number;
+  allocationPct: number;
+  riskContrib: number;
+  trades: number;
+  /** @nullable */
+  stopLoss?: number | null;
+  /** @nullable */
+  takeProfit?: number | null;
+}
+
+export interface AllocationItem {
+  symbol: string;
+  value: number;
+  pct: number;
+  category: string;
+}
+
+export interface PortfolioRisk {
+  openExposure: number;
+  exposurePct: number;
+  concentrationRisk: number;
+  portfolioVolatility: number;
+  downsideVolatility: number;
+  valueAtRisk95: number;
+  leverageRisk: number;
+  stopLossRate: number;
+  maxDrawdown: number;
+  openPositions: number;
+  positionsWithoutStops: number;
+  riskScore: number;
+}
+
+export type PortfolioAiAnalysisMetrics = { [key: string]: unknown };
+
+export interface PortfolioAiAnalysis {
+  summary: string;
+  sentiment: string;
+  recommendations: string[];
+  confidence: number;
+  healthScore: number;
+  generatedAt: string;
+  metrics: PortfolioAiAnalysisMetrics;
+}
+
+export interface StressTestScenario {
+  name: string;
+  description: string;
+  marketMove: number;
+  portfolioMove: number;
+  impact: number;
+  newPortfolioValue: number;
+  survivable: boolean;
+  severity: string;
+}
+
 export interface JournalStats {
   totalTrades: number;
   openTrades: number;
