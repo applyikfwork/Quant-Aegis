@@ -8,6 +8,7 @@ import {
   FlaskConical,
   GraduationCap,
   LineChart,
+  Map,
   Settings,
   Shield,
   ShieldCheck,
@@ -39,9 +40,11 @@ const NAV_ITEMS = [
   { href: "/research", label: "Research Lab", icon: FlaskConical, group: "Research" },
   // ── SYSTEM ───────────────────────────
   { href: "/system", label: "System Monitor", icon: Settings, group: "System" },
+  // ── HELP ─────────────────────────────
+  { href: "/guidance", label: "Guidance Center", icon: Map, group: "Help" },
 ];
 
-const GROUPS = ["Core", "Intelligence", "Trading", "Research", "System"];
+const GROUPS = ["Core", "Intelligence", "Trading", "Research", "System", "Help"];
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();

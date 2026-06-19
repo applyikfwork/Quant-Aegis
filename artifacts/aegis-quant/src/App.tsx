@@ -25,6 +25,8 @@ import Research from "@/pages/research";
 import PaperTrading from "@/pages/paper-trading";
 // Pages — Phase 3 (V7)
 import Notifications from "@/pages/notifications";
+// Pages — Phase 4 (V8)
+import Guidance from "@/pages/guidance";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -57,6 +59,8 @@ function Router() {
         <Route path="/paper-trading" component={PaperTrading} />
         {/* Phase 3 — V7 */}
         <Route path="/notifications" component={Notifications} />
+        {/* Phase 4 — V8 */}
+        <Route path="/guidance" component={Guidance} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

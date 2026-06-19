@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @workspace/aegis-quant run build",
+  "buildCommand": "pnpm --filter @workspace/aegis-quant run build",
   "outputDirectory": "artifacts/aegis-quant/dist/public",
   "installCommand": "pnpm install --frozen-lockfile",
   "framework": null,
@@ -22,5 +22,8 @@
         { "key": "X-XSS-Protection", "value": "1; mode=block" }
       ]
     }
-  ]
+  ],
+  "env": {
+    "BASE_PATH": "/"
+  }
 }
