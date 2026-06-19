@@ -12,4 +12,7 @@ export interface BacktestInput {
   endDate: string;
   symbol?: string;
   timeframe?: string;
+  capital?: number;
+  fees?: number;
+  slippage?: number;
 }

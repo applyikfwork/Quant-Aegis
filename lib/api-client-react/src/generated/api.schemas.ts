@@ -319,6 +319,10 @@ export interface BacktestResult {
   strategyName?: string | null;
   startDate: string;
   endDate: string;
+  /** @nullable */
+  symbol?: string | null;
+  /** @nullable */
+  timeframe?: string | null;
   totalTrades: number;
   wins: number;
   losses: number;
@@ -338,6 +342,133 @@ export interface BacktestInput {
   endDate: string;
   symbol?: string;
   timeframe?: string;
+  capital?: number;
+  fees?: number;
+  slippage?: number;
+}
+
+/**
+ * @nullable
+ */
+export type BacktestDashboardBestStrategy = { [key: string]: unknown } | null;
+
+export type BacktestDashboardRunsByMonthItem = { [key: string]: unknown };
+
+export type BacktestDashboardPerformanceDistributionItem = { [key: string]: unknown };
+
+export interface BacktestDashboard {
+  totalRuns?: number;
+  successfulRuns?: number;
+  avgWinRate?: number;
+  avgReturn?: number;
+  avgDrawdown?: number;
+  avgSharpe?: number;
+  bestReturn?: number;
+  /** @nullable */
+  bestStrategy?: BacktestDashboardBestStrategy;
+  researchScore?: number;
+  runsByMonth?: BacktestDashboardRunsByMonthItem[];
+  performanceDistribution?: BacktestDashboardPerformanceDistributionItem[];
+}
+
+export interface SimulatedTrade {
+  id?: number;
+  backtestId?: number;
+  symbol?: string;
+  side?: string;
+  entryTime?: string;
+  exitTime?: string;
+  entryPrice?: number;
+  exitPrice?: number;
+  size?: number;
+  profitLoss?: number;
+  profitLossPct?: number;
+  result?: string;
+  durationHours?: number;
+  mae?: number;
+  mfe?: number;
+}
+
+export interface EquityPoint {
+  date?: string;
+  equity?: number;
+  peak?: number;
+  drawdown?: number;
+  benchmark?: number;
+}
+
+export type MonteCarloResultHistogramItem = { [key: string]: unknown };
+
+export interface MonteCarloResult {
+  simulations?: number;
+  capital?: number;
+  percentile5?: number;
+  percentile25?: number;
+  percentile50?: number;
+  percentile75?: number;
+  percentile95?: number;
+  worstCase?: number;
+  bestCase?: number;
+  probProfit?: number;
+  probDoubling?: number;
+  avgMaxDrawdown?: number;
+  drawdownP95?: number;
+  histogram?: MonteCarloResultHistogramItem[];
+}
+
+export type WalkForwardResultPeriodsItem = { [key: string]: unknown };
+
+export interface WalkForwardResult {
+  periods?: WalkForwardResultPeriodsItem[];
+  avgInSampleReturn?: number;
+  avgOutOfSampleReturn?: number;
+  avgEfficiency?: number;
+  overfitRisk?: string;
+  consistencyScore?: number;
+  recommendation?: string;
+}
+
+export type BacktestOptimizationResultRunsItem = { [key: string]: unknown };
+
+export type BacktestOptimizationResultBestParams = { [key: string]: unknown };
+
+export type BacktestOptimizationResultParameterImportanceItem = { [key: string]: unknown };
+
+export interface BacktestOptimizationResult {
+  runs?: BacktestOptimizationResultRunsItem[];
+  bestParams?: BacktestOptimizationResultBestParams;
+  bestReturn?: number;
+  bestWinRate?: number;
+  bestSharpe?: number;
+  improvement?: number;
+  parameterImportance?: BacktestOptimizationResultParameterImportanceItem[];
+}
+
+export type BacktestAiReviewMarketConditionsItem = { [key: string]: unknown };
+
+export interface BacktestAiReview {
+  backtestId?: number;
+  strategyName?: string;
+  overallScore?: number;
+  grade?: string;
+  summary?: string;
+  strengths?: string[];
+  weaknesses?: string[];
+  recommendations?: string[];
+  marketConditions?: BacktestAiReviewMarketConditionsItem[];
+  overfitRisk?: string;
+  readyForLive?: boolean;
+  confidenceLevel?: number;
+  tradingStyle?: string;
+}
+
+export interface BacktestCompareInput {
+  ids: number[];
+}
+
+export interface BacktestComparison {
+  backtests?: BacktestResult[];
+  metrics?: string[];
 }
 
 export interface AiAnalyzeInput {

@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { supabase } from "../lib/supabase";
+import { supabase, isOfflineMode } from "../lib/supabase";
 import {
   CreateStrategyBody, GetStrategyParams, UpdateStrategyParams,
   UpdateStrategyBody, DeleteStrategyParams, GetStrategyBacktestsParams,
@@ -40,6 +40,10 @@ router.post("/strategies", async (req, res): Promise<void> => {
 
 // ── STRATEGY DASHBOARD (must be before /:id) ─────────────────────────────────
 router.get("/strategies/dashboard", async (_req, res): Promise<void> => {
+  if (isOfflineMode) {
+    res.json({ totalStrategies: 0, activeStrategies: 0, inactiveStrategies: 0, totalReturn: 0, totalReturnPct: 0, avgWinRate: 0, totalTrades: 0, healthScore: 0, bestStrategy: null, styleDistribution: [], lifecycle: { draft: 0, backtesting: 0, paperTesting: 0, live: 0, archived: 0 } });
+    return;
+  }
   const { data: strategies } = await supabase.from("strategies").select("*");
   const { data: trades } = await supabase.from("trades").select("strategy_id, profit_loss, status");
 

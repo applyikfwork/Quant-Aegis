@@ -1,10 +1,14 @@
 import { Router, type IRouter } from "express";
-import { supabase } from "../lib/supabase";
+import { supabase, isOfflineMode } from "../lib/supabase";
 import { GetRecentActivityQueryParams } from "@workspace/api-zod";
 
 const router: IRouter = Router();
 
 router.get("/dashboard/summary", async (_req, res): Promise<void> => {
+  if (isOfflineMode) {
+    res.json({ openTrades: 0, totalPnlToday: 0, winRateAllTime: 0, activeStrategies: 0, totalSignalsToday: 0, systemHealth: "healthy", accountBalance: 10000, unrealizedPnl: 0, totalClosedTrades: 0, bestTrade: null, worstTrade: null });
+    return;
+  }
   const startOfDay = new Date();
   startOfDay.setHours(0, 0, 0, 0);
 
@@ -45,6 +49,7 @@ router.get("/dashboard/summary", async (_req, res): Promise<void> => {
 });
 
 router.get("/dashboard/recent-activity", async (req, res): Promise<void> => {
+  if (isOfflineMode) { res.json([]); return; }
   const query = GetRecentActivityQueryParams.safeParse(req.query);
   const limit = query.success ? (query.data.limit ?? 20) : 20;
   const { data, error } = await supabase.from("activity_events").select("*").order("timestamp", { ascending: false }).limit(limit);

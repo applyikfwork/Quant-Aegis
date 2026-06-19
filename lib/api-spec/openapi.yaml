@@ -878,6 +878,38 @@ paths:
                   $ref: "#/components/schemas/ActivityEvent"
 
   # ── BACKTESTS ─────────────────────────────────────────────────────────────────
+  /backtests/dashboard:
+    get:
+      operationId: getBacktestDashboard
+      tags: [backtests]
+      summary: Backtesting dashboard overview stats
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BacktestDashboard"
+
+  /backtests/compare:
+    post:
+      operationId: compareBacktests
+      tags: [backtests]
+      summary: Compare multiple backtests side by side
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BacktestCompareInput"
+      responses:
+        "200":
+          description: Comparison result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BacktestComparison"
+
   /backtests:
     get:
       operationId: listBacktests
@@ -909,6 +941,136 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/BacktestResult"
+
+  /backtests/{id}:
+    get:
+      operationId: getBacktest
+      tags: [backtests]
+      summary: Get single backtest detail
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Backtest detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BacktestResult"
+
+  /backtests/{id}/trades:
+    get:
+      operationId: getBacktestTrades
+      tags: [backtests]
+      summary: Get simulated trades for a backtest
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Simulated trades
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SimulatedTrade"
+
+  /backtests/{id}/equity-curve:
+    get:
+      operationId: getBacktestEquityCurve
+      tags: [backtests]
+      summary: Get equity curve data points for a backtest
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Equity curve
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EquityPoint"
+
+  /backtests/{id}/monte-carlo:
+    post:
+      operationId: runMonteCarlo
+      tags: [backtests]
+      summary: Run Monte Carlo simulation on a backtest
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Monte Carlo result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MonteCarloResult"
+
+  /backtests/{id}/walk-forward:
+    post:
+      operationId: runWalkForward
+      tags: [backtests]
+      summary: Run walk-forward analysis on a backtest
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Walk-forward result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WalkForwardResult"
+
+  /backtests/{id}/optimize:
+    post:
+      operationId: runBacktestOptimization
+      tags: [backtests]
+      summary: Run parameter optimization on a backtest
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Optimization result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BacktestOptimizationResult"
+
+  /backtests/{id}/ai-review:
+    get:
+      operationId: getBacktestAiReview
+      tags: [backtests]
+      summary: Get AI review and analysis for a backtest
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: AI review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BacktestAiReview"
 
   # ── SYSTEM ────────────────────────────────────────────────────────────────────
   /system/status:
@@ -1746,6 +1908,10 @@ components:
           type: string
         endDate:
           type: string
+        symbol:
+          type: ["string", "null"]
+        timeframe:
+          type: ["string", "null"]
         totalTrades:
           type: integer
         wins:
@@ -1779,6 +1945,225 @@ components:
           type: string
         timeframe:
           type: string
+        capital:
+          type: number
+        fees:
+          type: number
+        slippage:
+          type: number
+
+    BacktestDashboard:
+      type: object
+      properties:
+        totalRuns:
+          type: integer
+        successfulRuns:
+          type: integer
+        avgWinRate:
+          type: number
+        avgReturn:
+          type: number
+        avgDrawdown:
+          type: number
+        avgSharpe:
+          type: number
+        bestReturn:
+          type: number
+        bestStrategy:
+          type: ["object", "null"]
+        researchScore:
+          type: integer
+        runsByMonth:
+          type: array
+          items:
+            type: object
+        performanceDistribution:
+          type: array
+          items:
+            type: object
+
+    SimulatedTrade:
+      type: object
+      properties:
+        id:
+          type: integer
+        backtestId:
+          type: integer
+        symbol:
+          type: string
+        side:
+          type: string
+        entryTime:
+          type: string
+        exitTime:
+          type: string
+        entryPrice:
+          type: number
+        exitPrice:
+          type: number
+        size:
+          type: number
+        profitLoss:
+          type: number
+        profitLossPct:
+          type: number
+        result:
+          type: string
+        durationHours:
+          type: number
+        mae:
+          type: number
+        mfe:
+          type: number
+
+    EquityPoint:
+      type: object
+      properties:
+        date:
+          type: string
+        equity:
+          type: number
+        peak:
+          type: number
+        drawdown:
+          type: number
+        benchmark:
+          type: number
+
+    MonteCarloResult:
+      type: object
+      properties:
+        simulations:
+          type: integer
+        capital:
+          type: number
+        percentile5:
+          type: number
+        percentile25:
+          type: number
+        percentile50:
+          type: number
+        percentile75:
+          type: number
+        percentile95:
+          type: number
+        worstCase:
+          type: number
+        bestCase:
+          type: number
+        probProfit:
+          type: number
+        probDoubling:
+          type: number
+        avgMaxDrawdown:
+          type: number
+        drawdownP95:
+          type: number
+        histogram:
+          type: array
+          items:
+            type: object
+
+    WalkForwardResult:
+      type: object
+      properties:
+        periods:
+          type: array
+          items:
+            type: object
+        avgInSampleReturn:
+          type: number
+        avgOutOfSampleReturn:
+          type: number
+        avgEfficiency:
+          type: number
+        overfitRisk:
+          type: string
+        consistencyScore:
+          type: integer
+        recommendation:
+          type: string
+
+    BacktestOptimizationResult:
+      type: object
+      properties:
+        runs:
+          type: array
+          items:
+            type: object
+        bestParams:
+          type: object
+        bestReturn:
+          type: number
+        bestWinRate:
+          type: number
+        bestSharpe:
+          type: number
+        improvement:
+          type: number
+        parameterImportance:
+          type: array
+          items:
+            type: object
+
+    BacktestAiReview:
+      type: object
+      properties:
+        backtestId:
+          type: integer
+        strategyName:
+          type: string
+        overallScore:
+          type: integer
+        grade:
+          type: string
+        summary:
+          type: string
+        strengths:
+          type: array
+          items:
+            type: string
+        weaknesses:
+          type: array
+          items:
+            type: string
+        recommendations:
+          type: array
+          items:
+            type: string
+        marketConditions:
+          type: array
+          items:
+            type: object
+        overfitRisk:
+          type: string
+        readyForLive:
+          type: boolean
+        confidenceLevel:
+          type: number
+        tradingStyle:
+          type: string
+
+    BacktestCompareInput:
+      type: object
+      required: [ids]
+      properties:
+        ids:
+          type: array
+          items:
+            type: integer
+
+    BacktestComparison:
+      type: object
+      properties:
+        backtests:
+          type: array
+          items:
+            $ref: "#/components/schemas/BacktestResult"
+        metrics:
+          type: array
+          items:
+            type: string
 
     # ── AI BRAIN ─────────────────────────────────────────────────────────────────
     AiAnalyzeInput:

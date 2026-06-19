@@ -360,6 +360,8 @@ export const GetStrategyBacktestsResponseItem = zod.object({
   "strategyName": zod.string().nullish(),
   "startDate": zod.string(),
   "endDate": zod.string(),
+  "symbol": zod.string().nullish(),
+  "timeframe": zod.string().nullish(),
   "totalTrades": zod.number(),
   "wins": zod.number(),
   "losses": zod.number(),
@@ -972,6 +974,60 @@ export const GetRecentActivityResponse = zod.array(GetRecentActivityResponseItem
 
 
 /**
+ * @summary Backtesting dashboard overview stats
+ */
+export const GetBacktestDashboardResponse = zod.object({
+  "totalRuns": zod.number().optional(),
+  "successfulRuns": zod.number().optional(),
+  "avgWinRate": zod.number().optional(),
+  "avgReturn": zod.number().optional(),
+  "avgDrawdown": zod.number().optional(),
+  "avgSharpe": zod.number().optional(),
+  "bestReturn": zod.number().optional(),
+  "bestStrategy": zod.object({
+
+}).passthrough().nullish(),
+  "researchScore": zod.number().optional(),
+  "runsByMonth": zod.array(zod.object({
+
+}).passthrough()).optional(),
+  "performanceDistribution": zod.array(zod.object({
+
+}).passthrough()).optional()
+})
+
+
+/**
+ * @summary Compare multiple backtests side by side
+ */
+export const CompareBacktestsBody = zod.object({
+  "ids": zod.array(zod.number())
+})
+
+export const CompareBacktestsResponse = zod.object({
+  "backtests": zod.array(zod.object({
+  "id": zod.number(),
+  "strategyId": zod.number(),
+  "strategyName": zod.string().nullish(),
+  "startDate": zod.string(),
+  "endDate": zod.string(),
+  "symbol": zod.string().nullish(),
+  "timeframe": zod.string().nullish(),
+  "totalTrades": zod.number(),
+  "wins": zod.number(),
+  "losses": zod.number(),
+  "winRate": zod.number(),
+  "profitFactor": zod.number(),
+  "drawdown": zod.number(),
+  "sharpeRatio": zod.number().nullish(),
+  "totalReturn": zod.number().nullish(),
+  "createdAt": zod.string()
+})).optional(),
+  "metrics": zod.array(zod.string()).optional()
+})
+
+
+/**
  * @summary List all backtest results
  */
 export const ListBacktestsResponseItem = zod.object({
@@ -980,6 +1036,8 @@ export const ListBacktestsResponseItem = zod.object({
   "strategyName": zod.string().nullish(),
   "startDate": zod.string(),
   "endDate": zod.string(),
+  "symbol": zod.string().nullish(),
+  "timeframe": zod.string().nullish(),
   "totalTrades": zod.number(),
   "wins": zod.number(),
   "losses": zod.number(),
@@ -1001,7 +1059,178 @@ export const CreateBacktestBody = zod.object({
   "startDate": zod.string(),
   "endDate": zod.string(),
   "symbol": zod.string().optional(),
-  "timeframe": zod.string().optional()
+  "timeframe": zod.string().optional(),
+  "capital": zod.number().optional(),
+  "fees": zod.number().optional(),
+  "slippage": zod.number().optional()
+})
+
+
+/**
+ * @summary Get single backtest detail
+ */
+export const GetBacktestParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetBacktestResponse = zod.object({
+  "id": zod.number(),
+  "strategyId": zod.number(),
+  "strategyName": zod.string().nullish(),
+  "startDate": zod.string(),
+  "endDate": zod.string(),
+  "symbol": zod.string().nullish(),
+  "timeframe": zod.string().nullish(),
+  "totalTrades": zod.number(),
+  "wins": zod.number(),
+  "losses": zod.number(),
+  "winRate": zod.number(),
+  "profitFactor": zod.number(),
+  "drawdown": zod.number(),
+  "sharpeRatio": zod.number().nullish(),
+  "totalReturn": zod.number().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Get simulated trades for a backtest
+ */
+export const GetBacktestTradesParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetBacktestTradesResponseItem = zod.object({
+  "id": zod.number().optional(),
+  "backtestId": zod.number().optional(),
+  "symbol": zod.string().optional(),
+  "side": zod.string().optional(),
+  "entryTime": zod.string().optional(),
+  "exitTime": zod.string().optional(),
+  "entryPrice": zod.number().optional(),
+  "exitPrice": zod.number().optional(),
+  "size": zod.number().optional(),
+  "profitLoss": zod.number().optional(),
+  "profitLossPct": zod.number().optional(),
+  "result": zod.string().optional(),
+  "durationHours": zod.number().optional(),
+  "mae": zod.number().optional(),
+  "mfe": zod.number().optional()
+})
+export const GetBacktestTradesResponse = zod.array(GetBacktestTradesResponseItem)
+
+
+/**
+ * @summary Get equity curve data points for a backtest
+ */
+export const GetBacktestEquityCurveParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetBacktestEquityCurveResponseItem = zod.object({
+  "date": zod.string().optional(),
+  "equity": zod.number().optional(),
+  "peak": zod.number().optional(),
+  "drawdown": zod.number().optional(),
+  "benchmark": zod.number().optional()
+})
+export const GetBacktestEquityCurveResponse = zod.array(GetBacktestEquityCurveResponseItem)
+
+
+/**
+ * @summary Run Monte Carlo simulation on a backtest
+ */
+export const RunMonteCarloParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const RunMonteCarloResponse = zod.object({
+  "simulations": zod.number().optional(),
+  "capital": zod.number().optional(),
+  "percentile5": zod.number().optional(),
+  "percentile25": zod.number().optional(),
+  "percentile50": zod.number().optional(),
+  "percentile75": zod.number().optional(),
+  "percentile95": zod.number().optional(),
+  "worstCase": zod.number().optional(),
+  "bestCase": zod.number().optional(),
+  "probProfit": zod.number().optional(),
+  "probDoubling": zod.number().optional(),
+  "avgMaxDrawdown": zod.number().optional(),
+  "drawdownP95": zod.number().optional(),
+  "histogram": zod.array(zod.object({
+
+}).passthrough()).optional()
+})
+
+
+/**
+ * @summary Run walk-forward analysis on a backtest
+ */
+export const RunWalkForwardParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const RunWalkForwardResponse = zod.object({
+  "periods": zod.array(zod.object({
+
+}).passthrough()).optional(),
+  "avgInSampleReturn": zod.number().optional(),
+  "avgOutOfSampleReturn": zod.number().optional(),
+  "avgEfficiency": zod.number().optional(),
+  "overfitRisk": zod.string().optional(),
+  "consistencyScore": zod.number().optional(),
+  "recommendation": zod.string().optional()
+})
+
+
+/**
+ * @summary Run parameter optimization on a backtest
+ */
+export const RunBacktestOptimizationParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const RunBacktestOptimizationResponse = zod.object({
+  "runs": zod.array(zod.object({
+
+}).passthrough()).optional(),
+  "bestParams": zod.object({
+
+}).passthrough().optional(),
+  "bestReturn": zod.number().optional(),
+  "bestWinRate": zod.number().optional(),
+  "bestSharpe": zod.number().optional(),
+  "improvement": zod.number().optional(),
+  "parameterImportance": zod.array(zod.object({
+
+}).passthrough()).optional()
+})
+
+
+/**
+ * @summary Get AI review and analysis for a backtest
+ */
+export const GetBacktestAiReviewParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetBacktestAiReviewResponse = zod.object({
+  "backtestId": zod.number().optional(),
+  "strategyName": zod.string().optional(),
+  "overallScore": zod.number().optional(),
+  "grade": zod.string().optional(),
+  "summary": zod.string().optional(),
+  "strengths": zod.array(zod.string()).optional(),
+  "weaknesses": zod.array(zod.string()).optional(),
+  "recommendations": zod.array(zod.string()).optional(),
+  "marketConditions": zod.array(zod.object({
+
+}).passthrough()).optional(),
+  "overfitRisk": zod.string().optional(),
+  "readyForLive": zod.boolean().optional(),
+  "confidenceLevel": zod.number().optional(),
+  "tradingStyle": zod.string().optional()
 })
 
 

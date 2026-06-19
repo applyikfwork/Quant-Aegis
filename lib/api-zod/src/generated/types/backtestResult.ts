@@ -13,6 +13,10 @@ export interface BacktestResult {
   strategyName?: string | null;
   startDate: string;
   endDate: string;
+  /** @nullable */
+  symbol?: string | null;
+  /** @nullable */
+  timeframe?: string | null;
   totalTrades: number;
   wins: number;
   losses: number;

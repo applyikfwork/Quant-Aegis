@@ -28,13 +28,19 @@ import type {
   AiFeedback,
   AiFeedbackInput,
   AllocationItem,
+  BacktestAiReview,
+  BacktestCompareInput,
+  BacktestComparison,
+  BacktestDashboard,
   BacktestInput,
+  BacktestOptimizationResult,
   BacktestResult,
   Candle,
   DailyPerformance,
   DashboardSummary,
   DeployInput,
   DeployResult,
+  EquityPoint,
   Experiment,
   ExperimentInput,
   GetDailyPerformanceParams,
@@ -47,6 +53,7 @@ import type {
   ListSignalsParams,
   ListTradesParams,
   MarketPrice,
+  MonteCarloResult,
   PaperTrade,
   PaperTradeInput,
   PerformanceSummary,
@@ -66,6 +73,7 @@ import type {
   RiskVar,
   Signal,
   SignalInput,
+  SimulatedTrade,
   Strategy,
   StrategyDashboard,
   StrategyInput,
@@ -91,7 +99,8 @@ import type {
   TradeReason,
   TradeReview,
   TradeReviewInput,
-  TradeUpdate
+  TradeUpdate,
+  WalkForwardResult
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -3461,6 +3470,154 @@ export function useGetRecentActivity<TData = Awaited<ReturnType<typeof getRecent
 
 
 
+export const getGetBacktestDashboardUrl = () => {
+
+
+
+
+  return `/api/backtests/dashboard`
+}
+
+/**
+ * @summary Backtesting dashboard overview stats
+ */
+export const getBacktestDashboard = async ( options?: RequestInit): Promise<BacktestDashboard> => {
+
+  return customFetch<BacktestDashboard>(getGetBacktestDashboardUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetBacktestDashboardQueryKey = () => {
+    return [
+    `/api/backtests/dashboard`
+    ] as const;
+    }
+
+
+export const getGetBacktestDashboardQueryOptions = <TData = Awaited<ReturnType<typeof getBacktestDashboard>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBacktestDashboard>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetBacktestDashboardQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getBacktestDashboard>>> = ({ signal }) => getBacktestDashboard({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getBacktestDashboard>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetBacktestDashboardQueryResult = NonNullable<Awaited<ReturnType<typeof getBacktestDashboard>>>
+export type GetBacktestDashboardQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Backtesting dashboard overview stats
+ */
+
+export function useGetBacktestDashboard<TData = Awaited<ReturnType<typeof getBacktestDashboard>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBacktestDashboard>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetBacktestDashboardQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCompareBacktestsUrl = () => {
+
+
+
+
+  return `/api/backtests/compare`
+}
+
+/**
+ * @summary Compare multiple backtests side by side
+ */
+export const compareBacktests = async (backtestCompareInput: BacktestCompareInput, options?: RequestInit): Promise<BacktestComparison> => {
+
+  return customFetch<BacktestComparison>(getCompareBacktestsUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      backtestCompareInput,)
+  }
+);}
+
+
+
+
+export const getCompareBacktestsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof compareBacktests>>, TError,{data: BodyType<BacktestCompareInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof compareBacktests>>, TError,{data: BodyType<BacktestCompareInput>}, TContext> => {
+
+const mutationKey = ['compareBacktests'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof compareBacktests>>, {data: BodyType<BacktestCompareInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  compareBacktests(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CompareBacktestsMutationResult = NonNullable<Awaited<ReturnType<typeof compareBacktests>>>
+    export type CompareBacktestsMutationBody = BodyType<BacktestCompareInput>
+    export type CompareBacktestsMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Compare multiple backtests side by side
+ */
+export const useCompareBacktests = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof compareBacktests>>, TError,{data: BodyType<BacktestCompareInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof compareBacktests>>,
+        TError,
+        {data: BodyType<BacktestCompareInput>},
+        TContext
+      > => {
+      return useMutation(getCompareBacktestsMutationOptions(options));
+    }
+
 export const getListBacktestsUrl = () => {
 
 
@@ -3608,6 +3765,524 @@ export const useCreateBacktest = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getCreateBacktestMutationOptions(options));
     }
+
+export const getGetBacktestUrl = (id: number,) => {
+
+
+
+
+  return `/api/backtests/${id}`
+}
+
+/**
+ * @summary Get single backtest detail
+ */
+export const getBacktest = async (id: number, options?: RequestInit): Promise<BacktestResult> => {
+
+  return customFetch<BacktestResult>(getGetBacktestUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetBacktestQueryKey = (id: number,) => {
+    return [
+    `/api/backtests/${id}`
+    ] as const;
+    }
+
+
+export const getGetBacktestQueryOptions = <TData = Awaited<ReturnType<typeof getBacktest>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBacktest>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetBacktestQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getBacktest>>> = ({ signal }) => getBacktest(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getBacktest>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetBacktestQueryResult = NonNullable<Awaited<ReturnType<typeof getBacktest>>>
+export type GetBacktestQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get single backtest detail
+ */
+
+export function useGetBacktest<TData = Awaited<ReturnType<typeof getBacktest>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBacktest>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetBacktestQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetBacktestTradesUrl = (id: number,) => {
+
+
+
+
+  return `/api/backtests/${id}/trades`
+}
+
+/**
+ * @summary Get simulated trades for a backtest
+ */
+export const getBacktestTrades = async (id: number, options?: RequestInit): Promise<SimulatedTrade[]> => {
+
+  return customFetch<SimulatedTrade[]>(getGetBacktestTradesUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetBacktestTradesQueryKey = (id: number,) => {
+    return [
+    `/api/backtests/${id}/trades`
+    ] as const;
+    }
+
+
+export const getGetBacktestTradesQueryOptions = <TData = Awaited<ReturnType<typeof getBacktestTrades>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBacktestTrades>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetBacktestTradesQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getBacktestTrades>>> = ({ signal }) => getBacktestTrades(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getBacktestTrades>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetBacktestTradesQueryResult = NonNullable<Awaited<ReturnType<typeof getBacktestTrades>>>
+export type GetBacktestTradesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get simulated trades for a backtest
+ */
+
+export function useGetBacktestTrades<TData = Awaited<ReturnType<typeof getBacktestTrades>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBacktestTrades>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetBacktestTradesQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetBacktestEquityCurveUrl = (id: number,) => {
+
+
+
+
+  return `/api/backtests/${id}/equity-curve`
+}
+
+/**
+ * @summary Get equity curve data points for a backtest
+ */
+export const getBacktestEquityCurve = async (id: number, options?: RequestInit): Promise<EquityPoint[]> => {
+
+  return customFetch<EquityPoint[]>(getGetBacktestEquityCurveUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetBacktestEquityCurveQueryKey = (id: number,) => {
+    return [
+    `/api/backtests/${id}/equity-curve`
+    ] as const;
+    }
+
+
+export const getGetBacktestEquityCurveQueryOptions = <TData = Awaited<ReturnType<typeof getBacktestEquityCurve>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBacktestEquityCurve>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetBacktestEquityCurveQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getBacktestEquityCurve>>> = ({ signal }) => getBacktestEquityCurve(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getBacktestEquityCurve>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetBacktestEquityCurveQueryResult = NonNullable<Awaited<ReturnType<typeof getBacktestEquityCurve>>>
+export type GetBacktestEquityCurveQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get equity curve data points for a backtest
+ */
+
+export function useGetBacktestEquityCurve<TData = Awaited<ReturnType<typeof getBacktestEquityCurve>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBacktestEquityCurve>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetBacktestEquityCurveQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getRunMonteCarloUrl = (id: number,) => {
+
+
+
+
+  return `/api/backtests/${id}/monte-carlo`
+}
+
+/**
+ * @summary Run Monte Carlo simulation on a backtest
+ */
+export const runMonteCarlo = async (id: number, options?: RequestInit): Promise<MonteCarloResult> => {
+
+  return customFetch<MonteCarloResult>(getRunMonteCarloUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getRunMonteCarloMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runMonteCarlo>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof runMonteCarlo>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['runMonteCarlo'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof runMonteCarlo>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  runMonteCarlo(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RunMonteCarloMutationResult = NonNullable<Awaited<ReturnType<typeof runMonteCarlo>>>
+
+    export type RunMonteCarloMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Run Monte Carlo simulation on a backtest
+ */
+export const useRunMonteCarlo = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runMonteCarlo>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof runMonteCarlo>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getRunMonteCarloMutationOptions(options));
+    }
+
+export const getRunWalkForwardUrl = (id: number,) => {
+
+
+
+
+  return `/api/backtests/${id}/walk-forward`
+}
+
+/**
+ * @summary Run walk-forward analysis on a backtest
+ */
+export const runWalkForward = async (id: number, options?: RequestInit): Promise<WalkForwardResult> => {
+
+  return customFetch<WalkForwardResult>(getRunWalkForwardUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getRunWalkForwardMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runWalkForward>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof runWalkForward>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['runWalkForward'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof runWalkForward>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  runWalkForward(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RunWalkForwardMutationResult = NonNullable<Awaited<ReturnType<typeof runWalkForward>>>
+
+    export type RunWalkForwardMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Run walk-forward analysis on a backtest
+ */
+export const useRunWalkForward = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runWalkForward>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof runWalkForward>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getRunWalkForwardMutationOptions(options));
+    }
+
+export const getRunBacktestOptimizationUrl = (id: number,) => {
+
+
+
+
+  return `/api/backtests/${id}/optimize`
+}
+
+/**
+ * @summary Run parameter optimization on a backtest
+ */
+export const runBacktestOptimization = async (id: number, options?: RequestInit): Promise<BacktestOptimizationResult> => {
+
+  return customFetch<BacktestOptimizationResult>(getRunBacktestOptimizationUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getRunBacktestOptimizationMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runBacktestOptimization>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof runBacktestOptimization>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['runBacktestOptimization'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof runBacktestOptimization>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  runBacktestOptimization(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RunBacktestOptimizationMutationResult = NonNullable<Awaited<ReturnType<typeof runBacktestOptimization>>>
+
+    export type RunBacktestOptimizationMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Run parameter optimization on a backtest
+ */
+export const useRunBacktestOptimization = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runBacktestOptimization>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof runBacktestOptimization>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getRunBacktestOptimizationMutationOptions(options));
+    }
+
+export const getGetBacktestAiReviewUrl = (id: number,) => {
+
+
+
+
+  return `/api/backtests/${id}/ai-review`
+}
+
+/**
+ * @summary Get AI review and analysis for a backtest
+ */
+export const getBacktestAiReview = async (id: number, options?: RequestInit): Promise<BacktestAiReview> => {
+
+  return customFetch<BacktestAiReview>(getGetBacktestAiReviewUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetBacktestAiReviewQueryKey = (id: number,) => {
+    return [
+    `/api/backtests/${id}/ai-review`
+    ] as const;
+    }
+
+
+export const getGetBacktestAiReviewQueryOptions = <TData = Awaited<ReturnType<typeof getBacktestAiReview>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBacktestAiReview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetBacktestAiReviewQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getBacktestAiReview>>> = ({ signal }) => getBacktestAiReview(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getBacktestAiReview>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetBacktestAiReviewQueryResult = NonNullable<Awaited<ReturnType<typeof getBacktestAiReview>>>
+export type GetBacktestAiReviewQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get AI review and analysis for a backtest
+ */
+
+export function useGetBacktestAiReview<TData = Awaited<ReturnType<typeof getBacktestAiReview>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBacktestAiReview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetBacktestAiReviewQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getGetSystemStatusUrl = () => {
 
