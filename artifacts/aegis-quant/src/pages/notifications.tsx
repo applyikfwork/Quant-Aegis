@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,23 @@ interface Notif {
   icon: React.ElementType;
   iconColor: string;
   action?: string;
+}
+
+// ── ICON MAP ──────────────────────────────────────────────────────────────────
+
+function categoryToIcon(cat: AlertCategory): { icon: React.ElementType; iconColor: string } {
+  switch (cat) {
+    case "market":    return { icon: TrendingUp,   iconColor: "text-blue-400" };
+    case "trade":     return { icon: Activity,      iconColor: "text-green-400" };
+    case "ai":        return { icon: Brain,         iconColor: "text-cyan-400" };
+    case "risk":      return { icon: AlertTriangle, iconColor: "text-orange-400" };
+    case "portfolio": return { icon: BarChart2,     iconColor: "text-blue-400" };
+    case "strategy":  return { icon: TrendingDown,  iconColor: "text-orange-400" };
+    case "research":  return { icon: Zap,           iconColor: "text-purple-400" };
+    case "security":  return { icon: Shield,        iconColor: "text-red-400" };
+    case "system":    return { icon: Server,        iconColor: "text-green-400" };
+    default:          return { icon: Activity,      iconColor: "text-muted-foreground" };
+  }
 }
 
 // ── LIVE FEED ─────────────────────────────────────────────────────────────────
@@ -770,6 +788,33 @@ function NotifAnalytics({ notifications }: any) {
 export default function Notifications() {
   const [activeTab, setActiveTab] = useState("feed");
   const [notifications, setNotifications] = useState<Notif[]>(BASE_NOTIFICATIONS);
+
+  // Fetch real notifications from the backend, fallback to BASE_NOTIFICATIONS
+  const { data: apiNotifications } = useQuery({
+    queryKey: ["notifications"],
+    queryFn: async () => {
+      const r = await fetch("/api/notifications");
+      if (!r.ok) throw new Error("API unavailable");
+      const data: any[] = await r.json();
+      return data.map(n => ({ ...n, ...categoryToIcon(n.category as AlertCategory) })) as Notif[];
+    },
+    refetchInterval: 30_000,
+    staleTime: 20_000,
+    retry: false,
+  });
+
+  // Seed state from API while preserving local read/dismiss overrides
+  useEffect(() => {
+    if (apiNotifications && apiNotifications.length > 0) {
+      setNotifications(prev => {
+        const localState = new Map(prev.map(n => [n.id, n.status]));
+        return apiNotifications.map(n => ({
+          ...n,
+          status: (localState.get(n.id) ?? n.status) as NotifStatus,
+        }));
+      });
+    }
+  }, [apiNotifications]);
 
   // Simulate live events arriving
   const tickRef = useRef(0);

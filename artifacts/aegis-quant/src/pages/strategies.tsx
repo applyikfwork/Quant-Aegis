@@ -1508,7 +1508,7 @@ export default function Strategies() {
                   </TabsContent>
 
                   {/* RULES */}
-                  <TabsContent value="rules" className="space-y-4">
+                  <TabsContent value="rules" className="space-y-4 min-h-[200px] animate-in fade-in-0 duration-150">
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div>
                         <p className="text-sm font-semibold text-success mb-2 flex items-center gap-1.5">

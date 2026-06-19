@@ -14,6 +14,7 @@ import learningRouter from "./learning";
 import journalRouter from "./journal";
 import portfolioRouter from "./portfolio";
 import riskRouter from "./risk";
+import notificationsRouter from "./notifications";
 
 const router: IRouter = Router();
 
@@ -32,5 +33,6 @@ router.use(aiRouter);
 router.use(paperTradingRouter);
 router.use(learningRouter);
 router.use(riskRouter);
+router.use(notificationsRouter);
 
 export default router;

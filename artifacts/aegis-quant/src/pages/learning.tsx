@@ -1127,12 +1127,14 @@ export default function Learning() {
           ))}
         </TabsList>
 
-        <TabsContent value="dashboard" className="mt-4">
+        <TabsContent value="dashboard" className="mt-4 pb-8">
           {profLoading ? (
             <div className="space-y-3">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}</div>
           ) : profile ? (
             <DashboardTab profile={profile} recs={recs} mentor={mentor} />
-          ) : null}
+          ) : (
+            <div className="space-y-3">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}</div>
+          )}
         </TabsContent>
 
         <TabsContent value="courses" className="mt-4">

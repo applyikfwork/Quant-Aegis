@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import ws from "ws";
 
 const supabaseUrl = process.env.SUPABASE_URL ?? "";
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
@@ -10,9 +11,13 @@ if (isOfflineMode) {
 }
 
 // Only create the client when real credentials are present
+// `transport: ws` fixes "Node.js 20 detected without native WebSocket support" error
 export const supabase = isOfflineMode
   ? null as unknown as ReturnType<typeof createClient>
-  : createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false } });
+  : createClient(supabaseUrl, supabaseKey, {
+      auth: { persistSession: false },
+      realtime: { transport: ws as unknown as typeof WebSocket },
+    });
 
 export async function setupTables(): Promise<void> {
   const sql = `
