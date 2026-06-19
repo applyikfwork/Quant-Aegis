@@ -267,12 +267,12 @@ function OverviewSection({ perf, loadingPerf }: { perf: any; loadingPerf: boolea
       />
 
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
-        <StatCard title="Portfolio Value" value="$128,400" icon={Wallet} iconColor="text-blue-400" trend={{ value: "+8.4% this month", up: true }} loading={loadingPerf} />
-        <StatCard title="AI Accuracy" value="84%" icon={Brain} iconColor="text-cyan-400" trend={{ value: "+2.1% vs last month", up: true }} />
-        <StatCard title="Active Strategies" value="12" sub="10 profitable" icon={Target} iconColor="text-purple-400" />
-        <StatCard title="Risk Score" value="32/100" sub="Low Risk · Safe" icon={ShieldCheck} iconColor="text-green-400" />
-        <StatCard title="Win Rate" value={perf ? `${perf.winRate?.toFixed(1)}%` : "72%"} icon={Trophy} iconColor="text-orange-400" trend={{ value: "+3.2% vs last month", up: true }} loading={loadingPerf} />
-        <StatCard title="Skill Growth" value="+22%" sub="Last 90 days" icon={BookOpen} iconColor="text-emerald-400" />
+        <StatCard title="Portfolio Value" value={perf ? formatCurrency(10000 + (perf.totalPnl ?? 0)) : "—"} icon={Wallet} iconColor="text-blue-400" loading={loadingPerf} />
+        <StatCard title="AI Accuracy" value={perf ? `${perf.winRate?.toFixed(1)}%` : "—"} icon={Brain} iconColor="text-cyan-400" loading={loadingPerf} />
+        <StatCard title="Active Strategies" value="—" sub="No strategies yet" icon={Target} iconColor="text-purple-400" />
+        <StatCard title="Risk Score" value="—" sub="No trades yet" icon={ShieldCheck} iconColor="text-green-400" />
+        <StatCard title="Win Rate" value={perf ? `${perf.winRate?.toFixed(1)}%` : "—"} icon={Trophy} iconColor="text-orange-400" loading={loadingPerf} />
+        <StatCard title="Profit Factor" value={perf ? formatNumber(perf.profitFactor) : "—"} sub="Gross profit ÷ loss" icon={BookOpen} iconColor="text-emerald-400" loading={loadingPerf} />
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
@@ -357,10 +357,10 @@ function PerformanceSection({ perf, loadingPerf, daily, loadingDaily }: any) {
       <SectionHeader title="Performance Analytics" desc="Professional return calculations, capital growth tracking, and risk-adjusted metrics." />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard title="Total Return" value={perf ? `+${formatPercent(perf.totalPnl / 100000 * 100)}` : "+28.4%"} icon={TrendingUp} iconColor="text-green-400" trend={{ value: "vs +18% benchmark", up: true }} loading={loadingPerf} />
-        <StatCard title="Sharpe Ratio" value={perf ? formatNumber(perf.sharpeRatio) : "2.41"} sub="Risk-adjusted return" icon={Target} iconColor="text-blue-400" loading={loadingPerf} />
-        <StatCard title="Max Drawdown" value={perf ? formatPercent(perf.maxDrawdown) : "-9.4%"} sub="Worst peak-to-trough" icon={TrendingDown} iconColor="text-red-400" loading={loadingPerf} />
-        <StatCard title="Profit Factor" value={perf ? formatNumber(perf.profitFactor) : "2.14"} sub="Gross profit ÷ loss" icon={BarChart2} iconColor="text-purple-400" loading={loadingPerf} />
+        <StatCard title="Total Return" value={perf ? `${perf.totalPnl >= 0 ? "+" : ""}${formatPercent(perf.totalPnl / 10000 * 100)}` : "—"} icon={TrendingUp} iconColor="text-green-400" loading={loadingPerf} />
+        <StatCard title="Sharpe Ratio" value={perf ? formatNumber(perf.sharpeRatio) : "—"} sub="Risk-adjusted return" icon={Target} iconColor="text-blue-400" loading={loadingPerf} />
+        <StatCard title="Max Drawdown" value={perf ? formatPercent(perf.maxDrawdown) : "—"} sub="Worst peak-to-trough" icon={TrendingDown} iconColor="text-red-400" loading={loadingPerf} />
+        <StatCard title="Profit Factor" value={perf ? formatNumber(perf.profitFactor) : "—"} sub="Gross profit ÷ loss" icon={BarChart2} iconColor="text-purple-400" loading={loadingPerf} />
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
@@ -413,16 +413,16 @@ function PerformanceSection({ perf, loadingPerf, daily, loadingDaily }: any) {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { period: "Daily", value: "+0.28%", pnl: "+$361" },
-          { period: "Weekly", value: "+1.94%", pnl: "+$2,490" },
-          { period: "Monthly", value: "+8.4%", pnl: "+$9,940" },
-          { period: "Yearly", value: "+62.3%", pnl: "+$48,200" },
+          { period: "Daily", key: "daily" },
+          { period: "Weekly", key: "weekly" },
+          { period: "Monthly", key: "monthly" },
+          { period: "Yearly", key: "yearly" },
         ].map((p) => (
           <Card key={p.period}>
             <CardContent className="p-4">
               <div className="text-xs text-muted-foreground mb-1">{p.period} Return</div>
-              <div className="text-xl font-bold text-green-400">{p.value}</div>
-              <div className="text-xs text-green-400 mt-0.5">{p.pnl}</div>
+              <div className="text-xl font-bold text-muted-foreground">—</div>
+              <div className="text-xs text-muted-foreground mt-0.5">No trades yet</div>
             </CardContent>
           </Card>
         ))}
@@ -439,17 +439,17 @@ function TradesSection({ perf, loadingPerf }: any) {
       <SectionHeader title="Trade Analytics" desc="Every trade analyzed — quality scores, distributions, win/loss patterns, and execution metrics." />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard title="Win Rate" value={perf ? formatPercent(perf.winRate) : "72%"} icon={Trophy} iconColor="text-green-400" loading={loadingPerf} />
-        <StatCard title="Avg Win" value={perf ? formatCurrency(perf.avgWin) : "$1,240"} icon={TrendingUp} iconColor="text-green-400" loading={loadingPerf} />
-        <StatCard title="Avg Loss" value={perf ? formatCurrency(Math.abs(perf.avgLoss)) : "$482"} icon={TrendingDown} iconColor="text-red-400" loading={loadingPerf} />
-        <StatCard title="Expectancy" value="$572" sub="Per trade average" icon={Target} iconColor="text-blue-400" />
+        <StatCard title="Win Rate" value={perf ? formatPercent(perf.winRate) : "—"} icon={Trophy} iconColor="text-green-400" loading={loadingPerf} />
+        <StatCard title="Avg Win" value={perf ? formatCurrency(perf.avgWin) : "—"} icon={TrendingUp} iconColor="text-green-400" loading={loadingPerf} />
+        <StatCard title="Avg Loss" value={perf ? formatCurrency(Math.abs(perf.avgLoss)) : "—"} icon={TrendingDown} iconColor="text-red-400" loading={loadingPerf} />
+        <StatCard title="Expectancy" value={perf ? formatCurrency((perf.avgWin * perf.winRate / 100) - (Math.abs(perf.avgLoss) * (1 - perf.winRate / 100))) : "—"} sub="Per trade average" icon={Target} iconColor="text-blue-400" loading={loadingPerf} />
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard title="Profit Factor" value={perf ? formatNumber(perf.profitFactor) : "2.14"} icon={BarChart2} iconColor="text-purple-400" loading={loadingPerf} />
-        <StatCard title="Avg Duration" value="4.2h" sub="Average hold time" icon={Activity} iconColor="text-cyan-400" />
-        <StatCard title="Avg Risk/Reward" value="1 : 2.57" sub="Risk-reward ratio" icon={Target} iconColor="text-orange-400" />
-        <StatCard title="Total Trades" value={perf ? formatNumber(perf.totalTrades, 0) : "284"} sub="All time" icon={BarChart2} iconColor="text-muted-foreground" loading={loadingPerf} />
+        <StatCard title="Profit Factor" value={perf ? formatNumber(perf.profitFactor) : "—"} icon={BarChart2} iconColor="text-purple-400" loading={loadingPerf} />
+        <StatCard title="Avg Duration" value="—" sub="No trades yet" icon={Activity} iconColor="text-cyan-400" />
+        <StatCard title="Avg Risk/Reward" value="—" sub="No trades yet" icon={Target} iconColor="text-orange-400" />
+        <StatCard title="Total Trades" value={perf ? formatNumber(perf.totalTrades, 0) : "0"} sub="All time" icon={BarChart2} iconColor="text-muted-foreground" loading={loadingPerf} />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -690,7 +690,7 @@ function RiskSection() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard title="Current Risk" value="32/100" sub="Low · Safe zone" icon={ShieldCheck} iconColor="text-green-400" />
-        <StatCard title="Max Drawdown" value="-9.4%" sub="Worst period" icon={TrendingDown} iconColor="text-red-400" />
+        <StatCard title="Max Drawdown" value={perf ? formatPercent(perf.maxDrawdown) : "—"} sub="Worst period" icon={TrendingDown} iconColor="text-red-400" loading={loadingPerf} />
         <StatCard title="Avg Recovery" value="4.2 days" sub="Avg drawdown recovery" icon={RefreshCw} iconColor="text-blue-400" />
         <StatCard title="Portfolio VaR" value="$2,840" sub="95% confidence (1-day)" icon={AlertTriangle} iconColor="text-yellow-400" />
       </div>

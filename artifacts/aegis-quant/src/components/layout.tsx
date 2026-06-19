@@ -2,6 +2,7 @@ import { Link, useLocation } from "wouter";
 import {
   Activity,
   BarChart2,
+  Bell,
   Brain,
   Briefcase,
   FlaskConical,
@@ -25,6 +26,7 @@ const NAV_ITEMS = [
   { href: "/ai", label: "AI Center", icon: Brain, group: "Intelligence" },
   { href: "/signals", label: "Signals Feed", icon: Signal, group: "Intelligence" },
   { href: "/learning", label: "Learning Center", icon: GraduationCap, group: "Intelligence" },
+  { href: "/notifications", label: "Notifications", icon: Bell, group: "Intelligence" },
   // ── TRADING ──────────────────────────
   { href: "/trades", label: "Trade Journal", icon: BarChart2, group: "Trading" },
   { href: "/paper-trading", label: "Paper Trading", icon: ClipboardList, group: "Trading" },
@@ -93,7 +95,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
         <div className="p-4 border-t border-border shrink-0">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>v0.2.0-alpha</span>
+            <span>v0.3.0-alpha</span>
             <span className="flex items-center text-success">
               <span className="w-2 h-2 rounded-full bg-success mr-2 animate-pulse" />
               Connected
