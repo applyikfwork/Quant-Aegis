@@ -171,6 +171,183 @@ export const DeleteStrategyParams = zod.object({
 
 
 /**
+ * @summary Get strategy library overview stats
+ */
+export const GetStrategyDashboardResponse = zod.object({
+  "totalStrategies": zod.number(),
+  "activeStrategies": zod.number(),
+  "inactiveStrategies": zod.number(),
+  "totalReturn": zod.number(),
+  "totalReturnPct": zod.number(),
+  "avgWinRate": zod.number(),
+  "totalTrades": zod.number(),
+  "healthScore": zod.number(),
+  "bestStrategy": zod.object({
+  "id": zod.number().optional(),
+  "name": zod.string().optional(),
+  "pnl": zod.number().optional(),
+  "winRate": zod.number().optional()
+}).nullish(),
+  "styleDistribution": zod.array(zod.object({
+  "style": zod.string().optional(),
+  "count": zod.number().optional()
+})).optional(),
+  "lifecycle": zod.object({
+  "draft": zod.number().optional(),
+  "backtesting": zod.number().optional(),
+  "paperTesting": zod.number().optional(),
+  "live": zod.number().optional(),
+  "archived": zod.number().optional()
+}).optional()
+})
+
+
+/**
+ * @summary Generate a strategy from natural language description
+ */
+export const BuildStrategyWithAiBody = zod.object({
+  "description": zod.string(),
+  "market": zod.string().optional(),
+  "timeframe": zod.string().optional(),
+  "style": zod.string().optional()
+})
+
+export const BuildStrategyWithAiResponse = zod.object({
+  "name": zod.string(),
+  "description": zod.string(),
+  "rulesJson": zod.string(),
+  "style": zod.string(),
+  "market": zod.string(),
+  "timeframe": zod.string(),
+  "indicators": zod.array(zod.string()).optional(),
+  "entryConditions": zod.array(zod.string()).optional(),
+  "exitConditions": zod.array(zod.string()).optional(),
+  "riskRules": zod.array(zod.string()).optional(),
+  "riskPerTrade": zod.number().optional(),
+  "estimatedWinRate": zod.number().optional(),
+  "estimatedRR": zod.number().optional(),
+  "confidence": zod.number(),
+  "generatedAt": zod.string(),
+  "readyToSave": zod.boolean()
+})
+
+
+/**
+ * @summary Get detailed performance metrics for a strategy
+ */
+export const GetStrategyPerformanceParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetStrategyPerformanceResponse = zod.object({
+  "strategyId": zod.number(),
+  "strategyName": zod.string(),
+  "totalTrades": zod.number(),
+  "openTrades": zod.number(),
+  "winners": zod.number(),
+  "losers": zod.number(),
+  "winRate": zod.number(),
+  "totalPnl": zod.number(),
+  "totalReturnPct": zod.number(),
+  "avgWin": zod.number(),
+  "avgLoss": zod.number(),
+  "profitFactor": zod.number(),
+  "sharpeRatio": zod.number(),
+  "maxDrawdown": zod.number(),
+  "volatility": zod.number(),
+  "bestTrade": zod.number(),
+  "worstTrade": zod.number(),
+  "monthlyPnl": zod.array(zod.object({
+  "month": zod.string().optional(),
+  "pnl": zod.number().optional()
+})).optional()
+})
+
+
+/**
+ * @summary Get AI optimization suggestions for a strategy
+ */
+export const GetStrategyOptimizationParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetStrategyOptimizationResponse = zod.object({
+  "strategyId": zod.number(),
+  "strategyName": zod.string(),
+  "currentWinRate": zod.number(),
+  "currentTrades": zod.number(),
+  "optimizationScore": zod.number(),
+  "suggestions": zod.array(zod.object({
+  "parameter": zod.string().optional(),
+  "current": zod.string().optional(),
+  "suggested": zod.string().optional(),
+  "expectedImprovement": zod.string().optional(),
+  "priority": zod.string().optional()
+})).optional(),
+  "methods": zod.array(zod.object({
+  "name": zod.string().optional(),
+  "description": zod.string().optional(),
+  "status": zod.string().optional(),
+  "estimatedTime": zod.string().optional()
+})).optional(),
+  "overfittingRisk": zod.string(),
+  "dataQuality": zod.string(),
+  "generatedAt": zod.string()
+})
+
+
+/**
+ * @summary Get live monitoring data for a strategy
+ */
+export const GetStrategyMonitorParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetStrategyMonitorResponse = zod.object({
+  "strategyId": zod.number(),
+  "strategyName": zod.string(),
+  "status": zod.string(),
+  "active": zod.boolean(),
+  "openTrades": zod.number(),
+  "totalClosedTrades": zod.number(),
+  "recentWinRate": zod.number(),
+  "historicalWinRate": zod.number(),
+  "performanceDecay": zod.number(),
+  "signals": zod.array(zod.string()).optional(),
+  "actions": zod.array(zod.string()).optional(),
+  "lastTradeAt": zod.string().nullish(),
+  "healthScore": zod.number(),
+  "monitoredAt": zod.string()
+})
+
+
+/**
+ * @summary Deploy a strategy to an environment
+ */
+export const DeployStrategyParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeployStrategyBody = zod.object({
+  "environment": zod.string().optional()
+})
+
+export const DeployStrategyResponse = zod.object({
+  "strategyId": zod.number(),
+  "strategyName": zod.string(),
+  "environment": zod.string(),
+  "deployed": zod.boolean(),
+  "checks": zod.array(zod.object({
+  "name": zod.string().optional(),
+  "passed": zod.boolean().optional(),
+  "message": zod.string().optional()
+})).optional(),
+  "message": zod.string(),
+  "deployedAt": zod.string().nullish()
+})
+
+
+/**
  * @summary Get backtest results for a strategy
  */
 export const GetStrategyBacktestsParams = zod.object({

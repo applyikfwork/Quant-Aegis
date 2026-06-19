@@ -210,6 +210,120 @@ paths:
         "204":
           description: Deleted
 
+  /strategies/dashboard:
+    get:
+      operationId: getStrategyDashboard
+      tags: [strategies]
+      summary: Get strategy library overview stats
+      responses:
+        "200":
+          description: Strategy dashboard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StrategyDashboard"
+
+  /strategies/ai-builder:
+    post:
+      operationId: buildStrategyWithAi
+      tags: [strategies]
+      summary: Generate a strategy from natural language description
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiBuilderInput"
+      responses:
+        "200":
+          description: AI-generated strategy blueprint
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiBuilderResult"
+
+  /strategies/{id}/performance:
+    get:
+      operationId: getStrategyPerformance
+      tags: [strategies]
+      summary: Get detailed performance metrics for a strategy
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Strategy performance data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StrategyPerformanceDetail"
+
+  /strategies/{id}/optimize:
+    get:
+      operationId: getStrategyOptimization
+      tags: [strategies]
+      summary: Get AI optimization suggestions for a strategy
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Optimization suggestions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StrategyOptimization"
+
+  /strategies/{id}/monitor:
+    get:
+      operationId: getStrategyMonitor
+      tags: [strategies]
+      summary: Get live monitoring data for a strategy
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Monitoring data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StrategyMonitor"
+
+  /strategies/{id}/deploy:
+    post:
+      operationId: deployStrategy
+      tags: [strategies]
+      summary: Deploy a strategy to an environment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeployInput"
+      responses:
+        "200":
+          description: Deployment result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeployResult"
+
   /strategies/{id}/backtest:
     get:
       operationId: getStrategyBacktests
@@ -1737,6 +1851,257 @@ components:
           type: boolean
         lesson:
           type: string
+
+    # ── STRATEGY EXPANDED SCHEMAS ─────────────────────────────────────────────────
+    StrategyDashboard:
+      type: object
+      required: [totalStrategies, activeStrategies, inactiveStrategies, totalReturn, totalReturnPct, avgWinRate, totalTrades, healthScore]
+      properties:
+        totalStrategies:
+          type: integer
+        activeStrategies:
+          type: integer
+        inactiveStrategies:
+          type: integer
+        totalReturn:
+          type: number
+        totalReturnPct:
+          type: number
+        avgWinRate:
+          type: number
+        totalTrades:
+          type: integer
+        healthScore:
+          type: integer
+        bestStrategy:
+          type: object
+          nullable: true
+          properties:
+            id: { type: integer }
+            name: { type: string }
+            pnl: { type: number }
+            winRate: { type: number }
+        styleDistribution:
+          type: array
+          items:
+            type: object
+            properties:
+              style: { type: string }
+              count: { type: integer }
+        lifecycle:
+          type: object
+          properties:
+            draft: { type: integer }
+            backtesting: { type: integer }
+            paperTesting: { type: integer }
+            live: { type: integer }
+            archived: { type: integer }
+
+    AiBuilderInput:
+      type: object
+      required: [description]
+      properties:
+        description:
+          type: string
+        market:
+          type: string
+        timeframe:
+          type: string
+        style:
+          type: string
+
+    AiBuilderResult:
+      type: object
+      required: [name, description, rulesJson, style, market, timeframe, confidence, generatedAt, readyToSave]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        rulesJson:
+          type: string
+        style:
+          type: string
+        market:
+          type: string
+        timeframe:
+          type: string
+        indicators:
+          type: array
+          items: { type: string }
+        entryConditions:
+          type: array
+          items: { type: string }
+        exitConditions:
+          type: array
+          items: { type: string }
+        riskRules:
+          type: array
+          items: { type: string }
+        riskPerTrade:
+          type: number
+        estimatedWinRate:
+          type: number
+        estimatedRR:
+          type: number
+        confidence:
+          type: number
+        generatedAt:
+          type: string
+        readyToSave:
+          type: boolean
+
+    StrategyPerformanceDetail:
+      type: object
+      required: [strategyId, strategyName, totalTrades, openTrades, winners, losers, winRate, totalPnl, totalReturnPct, avgWin, avgLoss, profitFactor, sharpeRatio, maxDrawdown, volatility, bestTrade, worstTrade]
+      properties:
+        strategyId:
+          type: integer
+        strategyName:
+          type: string
+        totalTrades:
+          type: integer
+        openTrades:
+          type: integer
+        winners:
+          type: integer
+        losers:
+          type: integer
+        winRate:
+          type: number
+        totalPnl:
+          type: number
+        totalReturnPct:
+          type: number
+        avgWin:
+          type: number
+        avgLoss:
+          type: number
+        profitFactor:
+          type: number
+        sharpeRatio:
+          type: number
+        maxDrawdown:
+          type: number
+        volatility:
+          type: number
+        bestTrade:
+          type: number
+        worstTrade:
+          type: number
+        monthlyPnl:
+          type: array
+          items:
+            type: object
+            properties:
+              month: { type: string }
+              pnl: { type: number }
+
+    StrategyOptimization:
+      type: object
+      required: [strategyId, strategyName, currentWinRate, currentTrades, optimizationScore, overfittingRisk, dataQuality, generatedAt]
+      properties:
+        strategyId:
+          type: integer
+        strategyName:
+          type: string
+        currentWinRate:
+          type: number
+        currentTrades:
+          type: integer
+        optimizationScore:
+          type: integer
+        suggestions:
+          type: array
+          items:
+            type: object
+            properties:
+              parameter: { type: string }
+              current: { type: string }
+              suggested: { type: string }
+              expectedImprovement: { type: string }
+              priority: { type: string }
+        methods:
+          type: array
+          items:
+            type: object
+            properties:
+              name: { type: string }
+              description: { type: string }
+              status: { type: string }
+              estimatedTime: { type: string }
+        overfittingRisk:
+          type: string
+        dataQuality:
+          type: string
+        generatedAt:
+          type: string
+
+    StrategyMonitor:
+      type: object
+      required: [strategyId, strategyName, status, active, openTrades, totalClosedTrades, recentWinRate, historicalWinRate, performanceDecay, healthScore, monitoredAt]
+      properties:
+        strategyId:
+          type: integer
+        strategyName:
+          type: string
+        status:
+          type: string
+        active:
+          type: boolean
+        openTrades:
+          type: integer
+        totalClosedTrades:
+          type: integer
+        recentWinRate:
+          type: number
+        historicalWinRate:
+          type: number
+        performanceDecay:
+          type: number
+        signals:
+          type: array
+          items: { type: string }
+        actions:
+          type: array
+          items: { type: string }
+        lastTradeAt:
+          type: ["string", "null"]
+        healthScore:
+          type: integer
+        monitoredAt:
+          type: string
+
+    DeployInput:
+      type: object
+      properties:
+        environment:
+          type: string
+
+    DeployResult:
+      type: object
+      required: [strategyId, strategyName, environment, deployed, message]
+      properties:
+        strategyId:
+          type: integer
+        strategyName:
+          type: string
+        environment:
+          type: string
+        deployed:
+          type: boolean
+        checks:
+          type: array
+          items:
+            type: object
+            properties:
+              name: { type: string }
+              passed: { type: boolean }
+              message: { type: string }
+        message:
+          type: string
+        deployedAt:
+          type: ["string", "null"]
 
     # ── RISK CENTER ───────────────────────────────────────────────────────────────
     RiskDashboard:

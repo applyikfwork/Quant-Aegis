@@ -395,6 +395,159 @@ export interface AiFeedbackInput {
   lesson?: string;
 }
 
+export type StrategyDashboardBestStrategy = {
+  id?: number;
+  name?: string;
+  pnl?: number;
+  winRate?: number;
+} | null;
+
+export type StrategyDashboardStyleDistributionItem = {
+  style?: string;
+  count?: number;
+};
+
+export type StrategyDashboardLifecycle = {
+  draft?: number;
+  backtesting?: number;
+  paperTesting?: number;
+  live?: number;
+  archived?: number;
+};
+
+export interface StrategyDashboard {
+  totalStrategies: number;
+  activeStrategies: number;
+  inactiveStrategies: number;
+  totalReturn: number;
+  totalReturnPct: number;
+  avgWinRate: number;
+  totalTrades: number;
+  healthScore: number;
+  bestStrategy?: StrategyDashboardBestStrategy;
+  styleDistribution?: StrategyDashboardStyleDistributionItem[];
+  lifecycle?: StrategyDashboardLifecycle;
+}
+
+export interface AiBuilderInput {
+  description: string;
+  market?: string;
+  timeframe?: string;
+  style?: string;
+}
+
+export interface AiBuilderResult {
+  name: string;
+  description: string;
+  rulesJson: string;
+  style: string;
+  market: string;
+  timeframe: string;
+  indicators?: string[];
+  entryConditions?: string[];
+  exitConditions?: string[];
+  riskRules?: string[];
+  riskPerTrade?: number;
+  estimatedWinRate?: number;
+  estimatedRR?: number;
+  confidence: number;
+  generatedAt: string;
+  readyToSave: boolean;
+}
+
+export type StrategyPerformanceDetailMonthlyPnlItem = {
+  month?: string;
+  pnl?: number;
+};
+
+export interface StrategyPerformanceDetail {
+  strategyId: number;
+  strategyName: string;
+  totalTrades: number;
+  openTrades: number;
+  winners: number;
+  losers: number;
+  winRate: number;
+  totalPnl: number;
+  totalReturnPct: number;
+  avgWin: number;
+  avgLoss: number;
+  profitFactor: number;
+  sharpeRatio: number;
+  maxDrawdown: number;
+  volatility: number;
+  bestTrade: number;
+  worstTrade: number;
+  monthlyPnl?: StrategyPerformanceDetailMonthlyPnlItem[];
+}
+
+export type StrategyOptimizationSuggestionsItem = {
+  parameter?: string;
+  current?: string;
+  suggested?: string;
+  expectedImprovement?: string;
+  priority?: string;
+};
+
+export type StrategyOptimizationMethodsItem = {
+  name?: string;
+  description?: string;
+  status?: string;
+  estimatedTime?: string;
+};
+
+export interface StrategyOptimization {
+  strategyId: number;
+  strategyName: string;
+  currentWinRate: number;
+  currentTrades: number;
+  optimizationScore: number;
+  suggestions?: StrategyOptimizationSuggestionsItem[];
+  methods?: StrategyOptimizationMethodsItem[];
+  overfittingRisk: string;
+  dataQuality: string;
+  generatedAt: string;
+}
+
+export interface StrategyMonitor {
+  strategyId: number;
+  strategyName: string;
+  status: string;
+  active: boolean;
+  openTrades: number;
+  totalClosedTrades: number;
+  recentWinRate: number;
+  historicalWinRate: number;
+  performanceDecay: number;
+  signals?: string[];
+  actions?: string[];
+  /** @nullable */
+  lastTradeAt?: string | null;
+  healthScore: number;
+  monitoredAt: string;
+}
+
+export interface DeployInput {
+  environment?: string;
+}
+
+export type DeployResultChecksItem = {
+  name?: string;
+  passed?: boolean;
+  message?: string;
+};
+
+export interface DeployResult {
+  strategyId: number;
+  strategyName: string;
+  environment: string;
+  deployed: boolean;
+  checks?: DeployResultChecksItem[];
+  message: string;
+  /** @nullable */
+  deployedAt?: string | null;
+}
+
 export interface RiskDashboard {
   riskScore: number;
   accountSafety: string;

@@ -1,114 +1,1220 @@
 import { useState } from "react";
-import { 
-  useListStrategies, 
-  useCreateStrategy, 
-  useUpdateStrategy, 
+import {
+  useListStrategies,
+  useGetStrategy,
+  useCreateStrategy,
+  useUpdateStrategy,
   useDeleteStrategy,
-  getListStrategiesQueryKey 
+  useGetStrategyBacktests,
+  useGetStrategyComparison,
 } from "@workspace/api-client-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useQueryClient } from "@tanstack/react-query";
-import { formatPercent, formatNumber } from "@/lib/format";
-import { Target, Plus } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Separator } from "@/components/ui/separator";
+import { formatCurrency, formatPercent } from "@/lib/format";
+import { cn } from "@/lib/utils";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
+  ResponsiveContainer, Cell,
+} from "recharts";
+import {
+  Brain, Zap, TrendingUp, Activity, Target,
+  CheckCircle2, XCircle, Play, Pause, Trash2, Plus, Edit3,
+  ChevronRight, Cpu, BarChart2, FlaskConical, LineChart,
+  BookOpen, Rocket, RefreshCw, AlertTriangle, Eye,
+  GitBranch, Layers, Shield, Star, Clock,
+} from "lucide-react";
 
+// ── Helpers ────────────────────────────────────────────────────────────────────
+function StatCard({ title, value, sub, icon: Icon, color, loading, trend }: {
+  title: string; value?: string; sub?: string;
+  icon?: React.ComponentType<{ className?: string }>;
+  color?: string; loading?: boolean; trend?: "up" | "down" | "neutral";
+}) {
+  if (loading) return (
+    <Card><CardContent className="pt-5 space-y-2">
+      <Skeleton className="h-3 w-20" /><Skeleton className="h-8 w-24" /><Skeleton className="h-3 w-16" />
+    </CardContent></Card>
+  );
+  return (
+    <Card>
+      <CardContent className="pt-5">
+        <div className="flex items-center justify-between mb-1">
+          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{title}</p>
+          {Icon && <Icon className="w-4 h-4 text-muted-foreground" />}
+        </div>
+        <p className={cn("text-2xl font-bold tracking-tight", color ?? "")}>{value ?? "—"}</p>
+        {sub && (
+          <p className="text-xs text-muted-foreground mt-1">{sub}</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+const LIFECYCLE_STAGES = [
+  { key: "draft", label: "Draft", color: "text-muted-foreground", bg: "bg-muted/20" },
+  { key: "backtesting", label: "Backtesting", color: "text-blue-400", bg: "bg-blue-500/10" },
+  { key: "paperTesting", label: "Paper Testing", color: "text-yellow-400", bg: "bg-yellow-500/10" },
+  { key: "live", label: "Live", color: "text-success", bg: "bg-success/10" },
+  { key: "archived", label: "Archived", color: "text-muted-foreground", bg: "bg-muted/10" },
+];
+
+// ── Strategy Card ──────────────────────────────────────────────────────────────
+function StrategyCard({
+  strategy, selected, onClick, onToggle, onDelete
+}: {
+  strategy: any; selected: boolean;
+  onClick: () => void;
+  onToggle: () => void;
+  onDelete: () => void;
+}) {
+  const winRateColor = (strategy.winRate ?? 0) >= 55 ? "text-success" : (strategy.winRate ?? 0) >= 45 ? "text-yellow-400" : "text-destructive";
+  const pfColor = (strategy.profitFactor ?? 0) >= 1.5 ? "text-success" : (strategy.profitFactor ?? 0) >= 1.0 ? "text-yellow-400" : "text-destructive";
+
+  return (
+    <Card
+      onClick={onClick}
+      className={cn("cursor-pointer transition-all hover:border-primary/40", selected && "border-primary bg-primary/5")}
+    >
+      <CardContent className="pt-4 pb-3">
+        <div className="flex items-start justify-between gap-2 mb-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 mb-0.5">
+              <p className="font-semibold text-sm truncate">{strategy.name}</p>
+              <span className="text-xs text-muted-foreground shrink-0">v{strategy.version}</span>
+            </div>
+            {strategy.description && (
+              <p className="text-xs text-muted-foreground line-clamp-1">{strategy.description}</p>
+            )}
+          </div>
+          <div className={cn("px-2 py-0.5 rounded-full text-xs font-semibold border shrink-0",
+            strategy.active ? "bg-success/10 text-success border-success/30" : "bg-muted/20 text-muted-foreground border-border")}>
+            {strategy.active ? "Live" : "Inactive"}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2 text-center">
+          <div>
+            <p className={cn("text-base font-bold", winRateColor)}>
+              {strategy.winRate != null ? `${strategy.winRate.toFixed(1)}%` : "—"}
+            </p>
+            <p className="text-xs text-muted-foreground">Win Rate</p>
+          </div>
+          <div>
+            <p className="text-base font-bold">{strategy.totalTrades ?? 0}</p>
+            <p className="text-xs text-muted-foreground">Trades</p>
+          </div>
+          <div>
+            <p className={cn("text-base font-bold", pfColor)}>
+              {strategy.profitFactor != null ? strategy.profitFactor.toFixed(2) : "—"}
+            </p>
+            <p className="text-xs text-muted-foreground">PF</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1 mt-3">
+          <Button size="sm" variant="ghost" className="h-7 text-xs flex-1"
+            onClick={e => { e.stopPropagation(); onClick(); }}>
+            <Eye className="w-3 h-3 mr-1" /> View
+          </Button>
+          <Button size="sm" variant="ghost" className="h-7 text-xs flex-1"
+            onClick={e => { e.stopPropagation(); onToggle(); }}>
+            {strategy.active ? <Pause className="w-3 h-3 mr-1" /> : <Play className="w-3 h-3 mr-1" />}
+            {strategy.active ? "Pause" : "Resume"}
+          </Button>
+          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+            onClick={e => { e.stopPropagation(); onDelete(); }}>
+            <Trash2 className="w-3 h-3" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Rules Parser ───────────────────────────────────────────────────────────────
+function RulesView({ rulesJson }: { rulesJson?: string | null }) {
+  if (!rulesJson) return <p className="text-sm text-muted-foreground">No rules defined</p>;
+  try {
+    const rules = JSON.parse(rulesJson);
+    if (typeof rules === "object" && rules !== null) {
+      return (
+        <div className="space-y-4">
+          {rules.indicators && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Indicators</p>
+              <div className="flex flex-wrap gap-2">
+                {rules.indicators.map((ind: string, i: number) => (
+                  <span key={i} className="px-2 py-1 rounded-md text-xs bg-blue-500/10 text-blue-400 border border-blue-500/20">{ind}</span>
+                ))}
+              </div>
+            </div>
+          )}
+          {rules.entryConditions && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Entry Conditions</p>
+              <div className="space-y-1">
+                {rules.entryConditions.map((c: string, i: number) => (
+                  <div key={i} className="flex items-center gap-2 text-sm">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-success shrink-0" /> {c}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {rules.exitConditions && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Exit Conditions</p>
+              <div className="space-y-1">
+                {rules.exitConditions.map((c: string, i: number) => (
+                  <div key={i} className="flex items-center gap-2 text-sm">
+                    <XCircle className="w-3.5 h-3.5 text-destructive shrink-0" /> {c}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {rules.riskRules && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Risk Rules</p>
+              <div className="space-y-1">
+                {rules.riskRules.map((c: string, i: number) => (
+                  <div key={i} className="flex items-center gap-2 text-sm">
+                    <Shield className="w-3.5 h-3.5 text-primary shrink-0" /> {c}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {(rules.style || rules.market || rules.timeframe) && (
+            <div className="flex gap-3 flex-wrap">
+              {rules.style && <span className="px-2 py-1 rounded text-xs bg-muted/20 border border-border">{rules.style}</span>}
+              {rules.market && <span className="px-2 py-1 rounded text-xs bg-muted/20 border border-border">{rules.market}</span>}
+              {rules.timeframe && <span className="px-2 py-1 rounded text-xs bg-muted/20 border border-border">{rules.timeframe}</span>}
+            </div>
+          )}
+        </div>
+      );
+    }
+  } catch { /* fall through */ }
+  return <pre className="text-xs bg-muted/10 p-3 rounded-lg border border-border whitespace-pre-wrap">{rulesJson}</pre>;
+}
+
+// ── Main Component ─────────────────────────────────────────────────────────────
 export default function Strategies() {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
+  const [tab, setTab] = useState("library");
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [detailTab, setDetailTab] = useState("overview");
+  const [showCreate, setShowCreate] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("trend following strategy for BTCUSDT using EMA and RSI with conservative risk management");
+  const [aiResult, setAiResult] = useState<any>(null);
+  const [aiBuilding, setAiBuilding] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [newName, setNewName] = useState("");
+  const [newDescription, setNewDescription] = useState("");
+  const [newRules, setNewRules] = useState("");
+  const [deployEnv, setDeployEnv] = useState("paper");
+  const [deployResult, setDeployResult] = useState<any>(null);
+  const [deploying, setDeploying] = useState(false);
+  const [optData, setOptData] = useState<any>(null);
+  const [optLoading, setOptLoading] = useState(false);
+  const [perfData, setPerfData] = useState<any>(null);
+  const [perfLoading, setPerfLoading] = useState(false);
+  const [monitorData, setMonitorData] = useState<any>(null);
+  const [monitorLoading, setMonitorLoading] = useState(false);
+  const [dashData, setDashData] = useState<any>(null);
+  const [dashLoaded, setDashLoaded] = useState(false);
 
-  const { data: strategies, isLoading } = useListStrategies({
-    query: { queryKey: getListStrategiesQueryKey() }
-  });
+  const { data: strategies, isLoading, refetch } = useListStrategies();
+  const { data: comparison, isLoading: compLoading } = useGetStrategyComparison();
+  const { data: selectedStrategy, refetch: refetchSelected } = useGetStrategy(
+    selectedId ?? 0,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    { query: { enabled: !!selectedId } as any }
+  );
+  const { data: backtests } = useGetStrategyBacktests(
+    selectedId ?? 0,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    { query: { enabled: !!selectedId } as any }
+  );
 
-  const updateStrategy = useUpdateStrategy();
+  const { mutate: createStrategy, isPending: creating } = useCreateStrategy();
+  const { mutate: updateStrategy, isPending: updating } = useUpdateStrategy();
+  const { mutate: deleteStrategy } = useDeleteStrategy();
 
-  const handleToggleActive = (id: number, active: boolean) => {
-    updateStrategy.mutate(
-      { id, data: { active } },
-      {
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: getListStrategiesQueryKey() });
-          toast({ title: "Strategy updated", description: `Strategy is now ${active ? 'active' : 'inactive'}.` });
-        }
-      }
+  const fetchDash = async () => {
+    try {
+      const r = await fetch("/api/strategies/dashboard");
+      setDashData(await r.json());
+    } catch { } finally { setDashLoaded(true); }
+  };
+
+  const fetchOptimization = async (id: number) => {
+    setOptLoading(true);
+    try {
+      const r = await fetch(`/api/strategies/${id}/optimize`);
+      setOptData(await r.json());
+    } catch { } finally { setOptLoading(false); }
+  };
+
+  const fetchPerformance = async (id: number) => {
+    setPerfLoading(true);
+    try {
+      const r = await fetch(`/api/strategies/${id}/performance`);
+      setPerfData(await r.json());
+    } catch { } finally { setPerfLoading(false); }
+  };
+
+  const fetchMonitor = async (id: number) => {
+    setMonitorLoading(true);
+    try {
+      const r = await fetch(`/api/strategies/${id}/monitor`);
+      setMonitorData(await r.json());
+    } catch { } finally { setMonitorLoading(false); }
+  };
+
+  const doDeploy = async (id: number) => {
+    setDeploying(true);
+    try {
+      const r = await fetch(`/api/strategies/${id}/deploy`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ environment: deployEnv }),
+      });
+      setDeployResult(await r.json());
+      refetch();
+      refetchSelected();
+    } catch { } finally { setDeploying(false); }
+  };
+
+  const runAiBuilder = async () => {
+    setAiBuilding(true);
+    setAiError(null);
+    try {
+      const r = await fetch("/api/strategies/ai-builder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description: aiPrompt }),
+      });
+      if (!r.ok) throw new Error("AI builder failed");
+      setAiResult(await r.json());
+    } catch (e: any) {
+      setAiError(e.message ?? "Unknown error");
+    } finally { setAiBuilding(false); }
+  };
+
+  const saveAiStrategy = () => {
+    if (!aiResult) return;
+    createStrategy(
+      { data: { name: aiResult.name, description: aiResult.description, rulesJson: aiResult.rulesJson, active: false } },
+      { onSuccess: () => { refetch(); setAiResult(null); setTab("library"); } }
     );
+  };
+
+  const handleSelectStrategy = (id: number) => {
+    setSelectedId(id);
+    fetchPerformance(id);
+    fetchMonitor(id);
+    setDetailTab("overview");
+    setDeployResult(null);
+  };
+
+  const handleToggleActive = (strategy: any) => {
+    updateStrategy({ id: strategy.id, data: { active: !strategy.active } }, { onSuccess: () => refetch() });
+  };
+
+  const handleDelete = (id: number) => {
+    deleteStrategy({ id }, { onSuccess: () => { refetch(); if (selectedId === id) setSelectedId(null); } });
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      {/* Header */}
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Strategy Library</h1>
-          <p className="text-sm text-muted-foreground">Manage trading algorithms and execution rules</p>
+          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+            <Brain className="w-6 h-6 text-primary" />
+            Strategy Center
+          </h1>
+          <p className="text-sm text-muted-foreground">Build, backtest, optimize and deploy AI trading strategies</p>
         </div>
-        <Button>
-          <Plus className="w-4 h-4 mr-2" />
-          New Strategy
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            <RefreshCw className="w-4 h-4 mr-2" />Refresh
+          </Button>
+          <Button size="sm" onClick={() => { setShowCreate(true); setTab("library"); }}>
+            <Plus className="w-4 h-4 mr-2" />New Strategy
+          </Button>
+        </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Target className="w-5 h-5 mr-2" />
-            Active Strategies
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Status</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Version</TableHead>
-                <TableHead className="text-right">Win Rate</TableHead>
-                <TableHead className="text-right">Total Trades</TableHead>
-                <TableHead className="text-right">Profit Factor</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+      <Tabs value={tab} onValueChange={(v) => { setTab(v); if (v === "dashboard" && !dashLoaded) fetchDash(); }}>
+        <TabsList className="flex flex-wrap h-auto gap-1 bg-muted/30 p-1">
+          {[
+            { id: "library", label: "Strategy Library", icon: BookOpen },
+            { id: "dashboard", label: "Dashboard", icon: Activity },
+            { id: "ai-builder", label: "AI Builder", icon: Brain },
+            { id: "comparison", label: "Comparison", icon: BarChart2 },
+            { id: "lifecycle", label: "Lifecycle", icon: GitBranch },
+          ].map(({ id, label, icon: Icon }) => (
+            <TabsTrigger key={id} value={id} className="flex items-center gap-1.5 text-xs px-3 py-1.5">
+              <Icon className="w-3.5 h-3.5" />
+              {label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+
+        {/* ── LIBRARY ── */}
+        <TabsContent value="library" className="mt-4">
+          <div className="grid gap-6 lg:grid-cols-[380px_1fr]">
+            {/* Left Panel */}
+            <div className="space-y-3">
+              {showCreate && (
+                <Card className="border-primary/30 bg-primary/5">
+                  <CardHeader className="pb-3"><CardTitle className="text-sm">New Strategy</CardTitle></CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Name *</Label>
+                      <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="My EMA Strategy" className="h-8 text-sm" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Description</Label>
+                      <Textarea value={newDescription} onChange={e => setNewDescription(e.target.value)} placeholder="Brief description..." rows={2} className="text-sm" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Rules (JSON or text)</Label>
+                      <Textarea value={newRules} onChange={e => setNewRules(e.target.value)} placeholder='{"indicators":["EMA 20","RSI"]}' rows={3} className="text-sm font-mono" />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" className="flex-1" disabled={!newName || creating}
+                        onClick={() => {
+                          createStrategy({ data: { name: newName, description: newDescription || undefined, rulesJson: newRules || undefined, active: true } }, {
+                            onSuccess: (s) => {
+                              refetch(); setShowCreate(false); setNewName(""); setNewDescription(""); setNewRules("");
+                              if (s?.id) handleSelectStrategy(s.id);
+                            }
+                          });
+                        }}>
+                        {creating ? "Creating..." : "Create"}
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => setShowCreate(false)}>Cancel</Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {isLoading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell><Skeleton className="h-4 w-10" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-8" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-16 ml-auto" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-16 ml-auto" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-16 ml-auto" /></TableCell>
-                  </TableRow>
+                Array.from({ length: 3 }).map((_, i) => (
+                  <Card key={i}><CardContent className="pt-4"><Skeleton className="h-28 w-full" /></CardContent></Card>
                 ))
-              ) : strategies?.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                    No strategies configured
-                  </TableCell>
-                </TableRow>
+              ) : (strategies ?? []).length === 0 ? (
+                <Card>
+                  <CardContent className="pt-8 pb-8 text-center space-y-3">
+                    <Brain className="w-10 h-10 mx-auto opacity-30" />
+                    <p className="text-sm text-muted-foreground">No strategies yet</p>
+                    <Button size="sm" onClick={() => setShowCreate(true)}>
+                      <Plus className="w-4 h-4 mr-2" /> Create First Strategy
+                    </Button>
+                  </CardContent>
+                </Card>
               ) : (
-                strategies?.map((strategy) => (
-                  <TableRow key={strategy.id}>
-                    <TableCell>
-                      <Switch 
-                        checked={strategy.active} 
-                        onCheckedChange={(checked) => handleToggleActive(strategy.id, checked)}
-                      />
-                    </TableCell>
-                    <TableCell className="font-medium">{strategy.name}</TableCell>
-                    <TableCell>v{strategy.version}</TableCell>
-                    <TableCell className="text-right">{strategy.winRate != null ? formatPercent(strategy.winRate) : '—'}</TableCell>
-                    <TableCell className="text-right">{strategy.totalTrades != null ? formatNumber(strategy.totalTrades, 0) : '—'}</TableCell>
-                    <TableCell className="text-right">{strategy.profitFactor != null ? formatNumber(strategy.profitFactor) : '—'}</TableCell>
-                  </TableRow>
+                (strategies ?? []).map(s => (
+                  <StrategyCard
+                    key={s.id}
+                    strategy={s}
+                    selected={selectedId === s.id}
+                    onClick={() => handleSelectStrategy(s.id)}
+                    onToggle={() => handleToggleActive(s)}
+                    onDelete={() => handleDelete(s.id)}
+                  />
                 ))
               )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+            </div>
+
+            {/* Right Panel — Detail */}
+            {selectedId && selectedStrategy ? (
+              <div className="space-y-4">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h2 className="text-xl font-bold">{selectedStrategy.name}</h2>
+                    <p className="text-sm text-muted-foreground">{selectedStrategy.description ?? "No description"}</p>
+                  </div>
+                  <Badge variant="outline" className={selectedStrategy.active ? "text-success border-success/30" : "text-muted-foreground"}>
+                    {selectedStrategy.active ? "● Live" : "● Inactive"}
+                  </Badge>
+                </div>
+
+                <Tabs value={detailTab} onValueChange={(v) => {
+                  setDetailTab(v);
+                  if (v === "optimize" && selectedId) fetchOptimization(selectedId);
+                  if (v === "monitor" && selectedId) fetchMonitor(selectedId);
+                }}>
+                  <TabsList className="flex flex-wrap h-auto gap-1 bg-muted/20 p-1">
+                    {["overview", "performance", "rules", "backtest", "optimize", "deploy", "monitor"].map(id => (
+                      <TabsTrigger key={id} value={id} className="text-xs px-3 py-1.5 capitalize">{id}</TabsTrigger>
+                    ))}
+                  </TabsList>
+
+                  {/* Overview */}
+                  <TabsContent value="overview" className="space-y-4 mt-4">
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                      <StatCard title="Win Rate" value={selectedStrategy.winRate != null ? `${selectedStrategy.winRate.toFixed(1)}%` : "—"} sub="All time" icon={TrendingUp}
+                        color={(selectedStrategy.winRate ?? 0) >= 55 ? "text-success" : (selectedStrategy.winRate ?? 0) >= 45 ? "text-yellow-400" : "text-destructive"} />
+                      <StatCard title="Total Trades" value={String(selectedStrategy.totalTrades ?? 0)} sub="Closed trades" icon={Activity} />
+                      <StatCard title="Profit Factor" value={selectedStrategy.profitFactor?.toFixed(2) ?? "—"} sub="Avg win ÷ Avg loss" icon={Target}
+                        color={(selectedStrategy.profitFactor ?? 0) >= 1.5 ? "text-success" : (selectedStrategy.profitFactor ?? 0) >= 1 ? "text-yellow-400" : "text-destructive"} />
+                      <StatCard title="Version" value={`v${selectedStrategy.version}`} sub={`Created ${new Date(selectedStrategy.createdAt).toLocaleDateString()}`} icon={GitBranch} />
+                    </div>
+                    {!perfLoading && perfData && (
+                      <div className="grid gap-4 sm:grid-cols-3">
+                        <Card><CardContent className="pt-4 space-y-1">
+                          <p className="text-xs text-muted-foreground uppercase tracking-wide">Total P&L</p>
+                          <p className={cn("text-2xl font-bold", (perfData.totalPnl ?? 0) >= 0 ? "text-success" : "text-destructive")}>{formatCurrency(perfData.totalPnl ?? 0)}</p>
+                          <p className="text-xs text-muted-foreground">{(perfData.totalReturnPct ?? 0).toFixed(1)}% return</p>
+                        </CardContent></Card>
+                        <Card><CardContent className="pt-4 space-y-1">
+                          <p className="text-xs text-muted-foreground uppercase tracking-wide">Sharpe Ratio</p>
+                          <p className={cn("text-2xl font-bold", (perfData.sharpeRatio ?? 0) >= 1 ? "text-success" : (perfData.sharpeRatio ?? 0) >= 0.5 ? "text-yellow-400" : "text-destructive")}>{(perfData.sharpeRatio ?? 0).toFixed(2)}</p>
+                          <p className="text-xs text-muted-foreground">Risk-adjusted return</p>
+                        </CardContent></Card>
+                        <Card><CardContent className="pt-4 space-y-1">
+                          <p className="text-xs text-muted-foreground uppercase tracking-wide">Max Drawdown</p>
+                          <p className={cn("text-2xl font-bold", (perfData.maxDrawdown ?? 0) > 20 ? "text-destructive" : (perfData.maxDrawdown ?? 0) > 10 ? "text-yellow-400" : "text-success")}>
+                            {formatPercent(perfData.maxDrawdown ?? 0)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">Peak-to-trough</p>
+                        </CardContent></Card>
+                      </div>
+                    )}
+                  </TabsContent>
+
+                  {/* Performance */}
+                  <TabsContent value="performance" className="space-y-4 mt-4">
+                    {perfLoading ? <Skeleton className="h-48 w-full" /> : !perfData ? (
+                      <p className="text-sm text-muted-foreground py-8 text-center">No performance data</p>
+                    ) : (
+                      <>
+                        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                          {[
+                            { l: "Winners", v: String(perfData.winners), c: "text-success" },
+                            { l: "Losers", v: String(perfData.losers), c: "text-destructive" },
+                            { l: "Avg Win", v: formatCurrency(perfData.avgWin), c: "text-success" },
+                            { l: "Avg Loss", v: formatCurrency(perfData.avgLoss), c: "text-destructive" },
+                            { l: "Best Trade", v: formatCurrency(perfData.bestTrade), c: "text-success" },
+                            { l: "Worst Trade", v: formatCurrency(perfData.worstTrade), c: "text-destructive" },
+                            { l: "Volatility", v: `${(perfData.volatility ?? 0).toFixed(2)}%`, c: "" },
+                            { l: "Open Now", v: String(perfData.openTrades), c: "" },
+                          ].map(({ l, v, c }) => (
+                            <div key={l} className="p-3 rounded-lg border border-border bg-muted/5">
+                              <p className="text-xs text-muted-foreground mb-1">{l}</p>
+                              <p className={cn("text-lg font-bold", c)}>{v}</p>
+                            </div>
+                          ))}
+                        </div>
+                        {(perfData.monthlyPnl ?? []).length > 0 && (
+                          <Card>
+                            <CardHeader><CardTitle className="text-sm">Monthly P&L</CardTitle></CardHeader>
+                            <CardContent>
+                              <ResponsiveContainer width="100%" height={180}>
+                                <BarChart data={perfData.monthlyPnl}>
+                                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted/20" />
+                                  <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+                                  <YAxis tick={{ fontSize: 10 }} tickFormatter={v => `$${v}`} />
+                                  <RechartsTooltip formatter={(v: number) => formatCurrency(v)} />
+                                  <Bar dataKey="pnl" name="P&L" radius={[4, 4, 0, 0]}>
+                                    {(perfData.monthlyPnl ?? []).map((entry: any, index: number) => (
+                                      <Cell key={`cell-${index}`} fill={entry.pnl >= 0 ? "#22c55e" : "#ef4444"} />
+                                    ))}
+                                  </Bar>
+                                </BarChart>
+                              </ResponsiveContainer>
+                            </CardContent>
+                          </Card>
+                        )}
+                      </>
+                    )}
+                  </TabsContent>
+
+                  {/* Rules */}
+                  <TabsContent value="rules" className="space-y-4 mt-4">
+                    <Card>
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-sm">Strategy Rules</CardTitle>
+                          <Button size="sm" variant="outline" onClick={() => setShowEdit(e => !e)}>
+                            <Edit3 className="w-3.5 h-3.5 mr-1.5" />{showEdit ? "Cancel" : "Edit"}
+                          </Button>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        {showEdit ? (
+                          <div className="space-y-3">
+                            <Label className="text-xs">Rules JSON</Label>
+                            <Textarea defaultValue={selectedStrategy.rulesJson ?? ""} rows={8} className="font-mono text-xs" id="edit-rules-ta" />
+                            <Button size="sm" onClick={() => {
+                              const el = document.getElementById("edit-rules-ta") as HTMLTextAreaElement;
+                              updateStrategy({ id: selectedId!, data: { rulesJson: el.value } }, {
+                                onSuccess: () => { refetchSelected(); setShowEdit(false); }
+                              });
+                            }} disabled={updating}>{updating ? "Saving..." : "Save Rules"}</Button>
+                          </div>
+                        ) : (
+                          <RulesView rulesJson={selectedStrategy.rulesJson} />
+                        )}
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+
+                  {/* Backtests */}
+                  <TabsContent value="backtest" className="space-y-4 mt-4">
+                    {(backtests ?? []).length === 0 ? (
+                      <Card><CardContent className="pt-8 pb-8 text-center space-y-3">
+                        <FlaskConical className="w-10 h-10 mx-auto opacity-30" />
+                        <p className="text-sm text-muted-foreground">No backtest runs yet</p>
+                        <p className="text-xs text-muted-foreground">Run a backtest from the Backtest module</p>
+                      </CardContent></Card>
+                    ) : (
+                      <Card><CardContent className="pt-4">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Period</TableHead>
+                              <TableHead className="text-right">Trades</TableHead>
+                              <TableHead className="text-right">Win Rate</TableHead>
+                              <TableHead className="text-right">Return</TableHead>
+                              <TableHead className="text-right">Profit Factor</TableHead>
+                              <TableHead className="text-right">Drawdown</TableHead>
+                              <TableHead className="text-right">Sharpe</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {(backtests ?? []).map(b => (
+                              <TableRow key={b.id}>
+                                <TableCell className="text-xs">
+                                  {b.startDate ? new Date(b.startDate).toLocaleDateString() : "—"} – {b.endDate ? new Date(b.endDate).toLocaleDateString() : "—"}
+                                </TableCell>
+                                <TableCell className="text-right">{b.totalTrades}</TableCell>
+                                <TableCell className={cn("text-right font-semibold", (b.winRate ?? 0) >= 55 ? "text-success" : (b.winRate ?? 0) >= 45 ? "text-yellow-400" : "text-destructive")}>
+                                  {(b.winRate ?? 0).toFixed(1)}%
+                                </TableCell>
+                                <TableCell className={cn("text-right font-semibold", (b.totalReturn ?? 0) >= 0 ? "text-success" : "text-destructive")}>
+                                  {formatPercent(b.totalReturn ?? 0)}
+                                </TableCell>
+                                <TableCell className={cn("text-right", (b.profitFactor ?? 0) >= 1.5 ? "text-success" : "text-yellow-400")}>
+                                  {(b.profitFactor ?? 0).toFixed(2)}
+                                </TableCell>
+                                <TableCell className={cn("text-right", (b.drawdown ?? 0) > 20 ? "text-destructive" : "text-foreground")}>
+                                  {formatPercent(b.drawdown ?? 0)}
+                                </TableCell>
+                                <TableCell className="text-right">{(b.sharpeRatio ?? 0).toFixed(2)}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </CardContent></Card>
+                    )}
+                  </TabsContent>
+
+                  {/* Optimize */}
+                  <TabsContent value="optimize" className="space-y-4 mt-4">
+                    {optLoading ? <Skeleton className="h-64 w-full" /> : !optData ? (
+                      <p className="text-sm text-muted-foreground text-center py-8">Loading optimization data...</p>
+                    ) : (
+                      <>
+                        <div className="grid gap-4 sm:grid-cols-3">
+                          <Card><CardContent className="pt-4">
+                            <p className="text-xs text-muted-foreground mb-1">Optimization Score</p>
+                            <p className={cn("text-2xl font-bold", (optData.optimizationScore ?? 0) >= 70 ? "text-success" : (optData.optimizationScore ?? 0) >= 50 ? "text-yellow-400" : "text-destructive")}>
+                              {optData.optimizationScore ?? 0}/100
+                            </p>
+                          </CardContent></Card>
+                          <Card><CardContent className="pt-4">
+                            <p className="text-xs text-muted-foreground mb-1">Overfitting Risk</p>
+                            <p className={cn("text-2xl font-bold capitalize", optData.overfittingRisk === "low" ? "text-success" : optData.overfittingRisk === "medium" ? "text-yellow-400" : "text-destructive")}>
+                              {optData.overfittingRisk}
+                            </p>
+                          </CardContent></Card>
+                          <Card><CardContent className="pt-4">
+                            <p className="text-xs text-muted-foreground mb-1">Data Quality</p>
+                            <p className={cn("text-2xl font-bold capitalize", optData.dataQuality === "adequate" ? "text-success" : optData.dataQuality === "limited" ? "text-yellow-400" : "text-destructive")}>
+                              {optData.dataQuality}
+                            </p>
+                          </CardContent></Card>
+                        </div>
+
+                        <Card>
+                          <CardHeader><CardTitle className="text-sm">Parameter Suggestions</CardTitle><CardDescription>AI-recommended improvements</CardDescription></CardHeader>
+                          <CardContent className="space-y-2">
+                            {(optData.suggestions ?? []).map((s: any, i: number) => (
+                              <div key={i} className="p-3 rounded-lg border border-border bg-muted/5">
+                                <div className="flex items-center justify-between mb-1">
+                                  <p className="font-semibold text-sm">{s.parameter}</p>
+                                  <span className={cn("text-xs px-2 py-0.5 rounded-full border font-semibold",
+                                    s.priority === "high" ? "bg-destructive/10 text-destructive border-destructive/30" :
+                                    s.priority === "medium" ? "bg-yellow-500/10 text-yellow-400 border-yellow-500/30" :
+                                    "bg-muted/20 text-muted-foreground border-border")}>
+                                    {s.priority.toUpperCase()}
+                                  </span>
+                                </div>
+                                <div className="text-xs text-muted-foreground mb-1">
+                                  <span className="font-medium">Current: </span>{s.current}
+                                  <ChevronRight className="w-3 h-3 inline mx-1" />
+                                  <span className="font-medium text-primary">Suggested: </span>{s.suggested}
+                                </div>
+                                <p className="text-xs text-success font-semibold">{s.expectedImprovement}</p>
+                              </div>
+                            ))}
+                          </CardContent>
+                        </Card>
+
+                        <Card>
+                          <CardHeader><CardTitle className="text-sm">Optimization Methods</CardTitle></CardHeader>
+                          <CardContent className="grid gap-3 sm:grid-cols-2">
+                            {(optData.methods ?? []).map((m: any) => (
+                              <div key={m.name} className={cn("p-3 rounded-lg border", m.status === "available" ? "border-border bg-muted/5" : "border-muted/20 bg-muted/5 opacity-60")}>
+                                <p className="font-semibold text-sm mb-1">{m.name}</p>
+                                <p className="text-xs text-muted-foreground mb-2">{m.description}</p>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs text-muted-foreground"><Clock className="w-3 h-3 inline mr-1" />{m.estimatedTime}</span>
+                                  <Button size="sm" variant="outline" className="h-6 text-xs" disabled={m.status !== "available"}>
+                                    {m.status === "available" ? "Run" : m.status}
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </CardContent>
+                        </Card>
+                      </>
+                    )}
+                  </TabsContent>
+
+                  {/* Deploy */}
+                  <TabsContent value="deploy" className="space-y-4 mt-4">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><Rocket className="w-4 h-4" />Deploy Strategy</CardTitle>
+                        <CardDescription>Send strategy to live, paper, or signal-only mode</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="grid gap-3 sm:grid-cols-3">
+                          {[
+                            { env: "paper", label: "Paper Trading", desc: "Simulate — no real risk", icon: FlaskConical, color: "border-blue-500/30 bg-blue-500/5" },
+                            { env: "signal", label: "Signal Only", desc: "Alerts — no auto-execution", icon: Activity, color: "border-yellow-500/30 bg-yellow-500/5" },
+                            { env: "live", label: "Live Trading", desc: "Real capital execution", icon: Zap, color: "border-success/30 bg-success/5" },
+                          ].map(({ env, label, desc, icon: Icon, color }) => (
+                            <button key={env} onClick={() => setDeployEnv(env)}
+                              className={cn("p-3 rounded-lg border text-left transition-all", color, deployEnv === env ? "ring-2 ring-primary" : "hover:ring-1 hover:ring-primary/30")}>
+                              <Icon className="w-4 h-4 mb-2" />
+                              <p className="font-semibold text-sm">{label}</p>
+                              <p className="text-xs text-muted-foreground">{desc}</p>
+                            </button>
+                          ))}
+                        </div>
+                        <Button onClick={() => doDeploy(selectedId!)} disabled={deploying} className="w-full">
+                          <Rocket className="w-4 h-4 mr-2" />
+                          {deploying ? "Deploying..." : `Deploy to ${deployEnv === "paper" ? "Paper Trading" : deployEnv === "signal" ? "Signal Mode" : "Live Trading"}`}
+                        </Button>
+                        {deployResult && (
+                          <div className={cn("p-4 rounded-lg border", deployResult.deployed ? "border-success/30 bg-success/5" : "border-destructive/30 bg-destructive/5")}>
+                            <div className="flex items-center gap-2 mb-3">
+                              {deployResult.deployed ? <CheckCircle2 className="w-5 h-5 text-success" /> : <XCircle className="w-5 h-5 text-destructive" />}
+                              <p className="font-semibold">{deployResult.deployed ? "Deployed Successfully" : "Deployment Failed"}</p>
+                            </div>
+                            <p className="text-sm text-muted-foreground mb-3">{deployResult.message}</p>
+                            <div className="space-y-1">
+                              {(deployResult.checks ?? []).map((c: any, i: number) => (
+                                <div key={i} className="flex items-center gap-2 text-xs">
+                                  {c.passed ? <CheckCircle2 className="w-3.5 h-3.5 text-success" /> : <XCircle className="w-3.5 h-3.5 text-destructive" />}
+                                  <span className="font-medium">{c.name}:</span>
+                                  <span className="text-muted-foreground">{c.message}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+
+                  {/* Monitor */}
+                  <TabsContent value="monitor" className="space-y-4 mt-4">
+                    {monitorLoading ? <Skeleton className="h-48 w-full" /> : !monitorData ? (
+                      <p className="text-sm text-muted-foreground py-8 text-center">Loading monitor data...</p>
+                    ) : (
+                      <>
+                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                          <Card><CardContent className="pt-4">
+                            <p className="text-xs text-muted-foreground mb-1">Status</p>
+                            <p className={cn("text-xl font-bold capitalize",
+                              monitorData.status === "healthy" ? "text-success" :
+                              monitorData.status === "degraded" ? "text-destructive" :
+                              monitorData.status === "busy" ? "text-yellow-400" : "text-muted-foreground")}>
+                              ● {monitorData.status}
+                            </p>
+                          </CardContent></Card>
+                          <Card><CardContent className="pt-4">
+                            <p className="text-xs text-muted-foreground mb-1">Health Score</p>
+                            <p className={cn("text-2xl font-bold", (monitorData.healthScore ?? 0) >= 70 ? "text-success" : (monitorData.healthScore ?? 0) >= 40 ? "text-yellow-400" : "text-destructive")}>
+                              {monitorData.healthScore ?? 0}/100
+                            </p>
+                          </CardContent></Card>
+                          <Card><CardContent className="pt-4">
+                            <p className="text-xs text-muted-foreground mb-1">Recent Win Rate</p>
+                            <p className={cn("text-2xl font-bold", (monitorData.recentWinRate ?? 0) >= 55 ? "text-success" : (monitorData.recentWinRate ?? 0) >= 45 ? "text-yellow-400" : "text-destructive")}>
+                              {(monitorData.recentWinRate ?? 0).toFixed(1)}%
+                            </p>
+                          </CardContent></Card>
+                          <Card><CardContent className="pt-4">
+                            <p className="text-xs text-muted-foreground mb-1">Performance Decay</p>
+                            <p className={cn("text-2xl font-bold", (monitorData.performanceDecay ?? 0) > 10 ? "text-destructive" : (monitorData.performanceDecay ?? 0) > 5 ? "text-yellow-400" : "text-success")}>
+                              {(monitorData.performanceDecay ?? 0).toFixed(1)}%
+                            </p>
+                          </CardContent></Card>
+                        </div>
+                        <Card>
+                          <CardHeader><CardTitle className="text-sm">Signal Alerts</CardTitle></CardHeader>
+                          <CardContent className="space-y-2">
+                            {(monitorData.signals ?? []).map((s: string, i: number) => (
+                              <div key={i} className="flex items-center gap-2 p-2 rounded bg-muted/10 text-sm">
+                                <AlertTriangle className="w-3.5 h-3.5 text-yellow-400 shrink-0" /> {s}
+                              </div>
+                            ))}
+                          </CardContent>
+                        </Card>
+                        {(monitorData.actions ?? []).length > 0 && (
+                          <Card>
+                            <CardHeader><CardTitle className="text-sm">Recommended Actions</CardTitle></CardHeader>
+                            <CardContent className="space-y-2">
+                              {(monitorData.actions ?? []).map((a: string, i: number) => (
+                                <div key={i} className="flex items-center gap-2 p-2 rounded bg-primary/5 text-sm">
+                                  <ChevronRight className="w-3.5 h-3.5 text-primary shrink-0" /> {a}
+                                </div>
+                              ))}
+                            </CardContent>
+                          </Card>
+                        )}
+                      </>
+                    )}
+                  </TabsContent>
+                </Tabs>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+                <Brain className="w-12 h-12 opacity-20 mb-3" />
+                <p className="text-sm">Select a strategy to view details</p>
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        {/* ── DASHBOARD ── */}
+        <TabsContent value="dashboard" className="space-y-6 mt-4">
+          {!dashLoaded ? (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {Array.from({ length: 8 }).map((_, i) => <Card key={i}><CardContent className="pt-5"><Skeleton className="h-16 w-full" /></CardContent></Card>)}
+            </div>
+          ) : dashData ? (
+            <>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <StatCard title="Total Strategies" value={String(dashData.totalStrategies ?? 0)} sub={`${dashData.activeStrategies ?? 0} active`} icon={Brain} />
+                <StatCard title="Total Return" value={formatCurrency(dashData.totalReturn ?? 0)} sub={`${(dashData.totalReturnPct ?? 0).toFixed(1)}%`}
+                  color={(dashData.totalReturn ?? 0) >= 0 ? "text-success" : "text-destructive"} icon={TrendingUp} />
+                <StatCard title="Avg Win Rate" value={`${(dashData.avgWinRate ?? 0).toFixed(1)}%`} sub="Portfolio average"
+                  color={(dashData.avgWinRate ?? 0) >= 55 ? "text-success" : (dashData.avgWinRate ?? 0) >= 45 ? "text-yellow-400" : "text-destructive"} icon={Target} />
+                <StatCard title="System Health" value={`${dashData.healthScore ?? 0}/100`} sub="Overall score"
+                  color={(dashData.healthScore ?? 0) >= 70 ? "text-success" : (dashData.healthScore ?? 0) >= 50 ? "text-yellow-400" : "text-destructive"} icon={Activity} />
+              </div>
+
+              {dashData.bestStrategy && (
+                <Card className="border-success/30 bg-success/5">
+                  <CardContent className="pt-4 pb-4 flex items-center gap-3">
+                    <Star className="w-5 h-5 text-yellow-400" />
+                    <div>
+                      <p className="font-semibold">Best Strategy: {dashData.bestStrategy.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {formatCurrency(dashData.bestStrategy.pnl)} P&L · {dashData.bestStrategy.winRate?.toFixed(1) ?? 0}% win rate
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              <div className="grid gap-6 lg:grid-cols-2">
+                {(dashData.styleDistribution ?? []).length > 0 && (
+                  <Card>
+                    <CardHeader><CardTitle className="text-sm">Style Distribution</CardTitle></CardHeader>
+                    <CardContent className="space-y-3">
+                      {(dashData.styleDistribution ?? []).map((s: any) => (
+                        <div key={s.style}>
+                          <div className="flex justify-between text-xs mb-1">
+                            <span>{s.style}</span>
+                            <span className="text-muted-foreground">{s.count}</span>
+                          </div>
+                          <Progress value={dashData.totalStrategies > 0 ? (s.count / dashData.totalStrategies) * 100 : 0} className="h-2" />
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {dashData.lifecycle && (
+                  <Card>
+                    <CardHeader><CardTitle className="text-sm">Lifecycle Distribution</CardTitle></CardHeader>
+                    <CardContent className="space-y-2">
+                      {LIFECYCLE_STAGES.map(({ key, label, color, bg }) => (
+                        <div key={key} className={cn("flex items-center justify-between p-3 rounded-lg border border-transparent", bg)}>
+                          <span className={cn("text-sm font-medium", color)}>{label}</span>
+                          <span className={cn("text-lg font-bold", color)}>{dashData.lifecycle[key] ?? 0}</span>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+
+              <div className="flex justify-end">
+                <Button variant="outline" size="sm" onClick={fetchDash}>
+                  <RefreshCw className="w-4 h-4 mr-2" /> Refresh Dashboard
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div className="text-center py-12 text-muted-foreground">
+              <Activity className="w-10 h-10 mx-auto mb-3 opacity-30" />
+              <Button size="sm" className="mt-3" onClick={fetchDash}>Load Dashboard</Button>
+            </div>
+          )}
+        </TabsContent>
+
+        {/* ── AI BUILDER ── */}
+        <TabsContent value="ai-builder" className="space-y-6 mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Brain className="w-5 h-5 text-primary" />
+                AI Strategy Builder
+              </CardTitle>
+              <CardDescription>Describe your ideal strategy in plain English. The AI will generate a complete ruleset with indicators, entries, exits, and risk management.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-1.5">
+                <Label>Strategy Description</Label>
+                <Textarea value={aiPrompt} onChange={e => setAiPrompt(e.target.value)}
+                  placeholder="e.g. aggressive momentum scalping strategy for ETHUSDT on 5m timeframe using MACD and volume filter"
+                  rows={4} className="resize-none" />
+              </div>
+
+              <div className="flex flex-wrap gap-2 text-xs">
+                {[
+                  "trend following BTCUSDT EMA RSI conservative",
+                  "mean reversion ETH Bollinger Bands daily",
+                  "breakout SOLUSDT volume filter aggressive",
+                  "swing trading BTCUSDT MACD momentum",
+                  "scalping BTC 5m fast RSI low risk",
+                ].map(ex => (
+                  <button key={ex} onClick={() => setAiPrompt(ex)}
+                    className="px-2 py-1 rounded bg-muted/20 border border-border hover:bg-muted/40 transition-colors text-muted-foreground">
+                    "{ex}"
+                  </button>
+                ))}
+              </div>
+
+              <Button onClick={runAiBuilder} disabled={aiBuilding || !aiPrompt.trim()} className="w-full">
+                <Brain className="w-4 h-4 mr-2" />
+                {aiBuilding ? "AI is building your strategy..." : "Generate Strategy"}
+              </Button>
+
+              {aiError && (
+                <div className="p-3 rounded-lg border border-destructive/30 bg-destructive/5 text-destructive text-sm">
+                  <AlertTriangle className="w-4 h-4 inline mr-2" />{aiError}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {aiResult && (
+            <Card className="border-primary/30 bg-primary/5">
+              <CardHeader>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <CardTitle>{aiResult.name}</CardTitle>
+                    <CardDescription className="mt-1">{aiResult.description}</CardDescription>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-2xl font-bold text-primary">{aiResult.confidence}%</p>
+                    <p className="text-xs text-muted-foreground">AI Confidence</p>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="flex gap-3 flex-wrap">
+                  {[aiResult.style, aiResult.market, aiResult.timeframe].filter(Boolean).map((tag: string) => (
+                    <span key={tag} className="px-2 py-1 rounded text-xs bg-primary/10 text-primary border border-primary/20">{tag}</span>
+                  ))}
+                </div>
+
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Indicators</p>
+                  <div className="flex flex-wrap gap-2">
+                    {(aiResult.indicators ?? []).map((ind: string, i: number) => (
+                      <span key={i} className="px-2 py-1 rounded-md text-xs bg-blue-500/10 text-blue-400 border border-blue-500/20">{ind}</span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid gap-5 lg:grid-cols-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Entry Conditions</p>
+                    {(aiResult.entryConditions ?? []).map((c: string, i: number) => (
+                      <div key={i} className="flex items-start gap-1.5 text-sm mb-1">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-success shrink-0 mt-0.5" />{c}
+                      </div>
+                    ))}
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Exit Conditions</p>
+                    {(aiResult.exitConditions ?? []).map((c: string, i: number) => (
+                      <div key={i} className="flex items-start gap-1.5 text-sm mb-1">
+                        <XCircle className="w-3.5 h-3.5 text-destructive shrink-0 mt-0.5" />{c}
+                      </div>
+                    ))}
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Risk Rules</p>
+                    {(aiResult.riskRules ?? []).map((c: string, i: number) => (
+                      <div key={i} className="flex items-start gap-1.5 text-sm mb-1">
+                        <Shield className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />{c}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {[
+                    { l: "Est. Win Rate", v: `${aiResult.estimatedWinRate}%` },
+                    { l: "Est. Risk:Reward", v: `1:${aiResult.estimatedRR?.toFixed(1)}` },
+                    { l: "Risk per Trade", v: `${aiResult.riskPerTrade}%` },
+                  ].map(({ l, v }) => (
+                    <div key={l} className="p-3 rounded-lg border border-border bg-muted/10 text-center">
+                      <p className="text-xs text-muted-foreground mb-1">{l}</p>
+                      <p className="text-xl font-bold">{v}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <Separator />
+
+                <div className="flex items-center gap-3">
+                  <Button onClick={saveAiStrategy} disabled={creating} className="flex-1">
+                    <Plus className="w-4 h-4 mr-2" />{creating ? "Saving..." : "Save Strategy to Library"}
+                  </Button>
+                  <Button variant="outline" onClick={() => setAiResult(null)}>Discard</Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {!aiResult && (
+            <div className="grid gap-4 sm:grid-cols-3">
+              {[
+                { title: "Pattern Recognition", desc: "Detects style keywords: trend, breakout, mean reversion, scalping, swing", icon: Brain },
+                { title: "Indicator Selection", desc: "Auto-selects: EMA, RSI, MACD, Bollinger, VWAP, ATR based on context", icon: LineChart },
+                { title: "Risk Configuration", desc: "Sets risk rules based on style and risk tolerance keywords", icon: Shield },
+              ].map(({ title, desc, icon: Icon }) => (
+                <Card key={title} className="border-border bg-muted/5">
+                  <CardContent className="pt-4">
+                    <Icon className="w-5 h-5 text-primary mb-2" />
+                    <p className="font-semibold text-sm mb-1">{title}</p>
+                    <p className="text-xs text-muted-foreground">{desc}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* ── COMPARISON ── */}
+        <TabsContent value="comparison" className="space-y-6 mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Strategy Performance Comparison</CardTitle>
+              <CardDescription>Side-by-side comparison of all strategies by key metrics</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {compLoading ? <Skeleton className="h-64 w-full" /> : (comparison ?? []).length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <BarChart2 className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                  <p>No comparison data — add strategies and trades first</p>
+                </div>
+              ) : (
+                <>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Strategy</TableHead>
+                        <TableHead className="text-right">Trades</TableHead>
+                        <TableHead className="text-right">Win Rate</TableHead>
+                        <TableHead className="text-right">Total P&L</TableHead>
+                        <TableHead className="text-right">Avg P&L</TableHead>
+                        <TableHead className="text-right">Profit Factor</TableHead>
+                        <TableHead className="text-right">Max DD</TableHead>
+                        <TableHead className="text-center">Rank</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {[...(comparison ?? [])].sort((a, b) => (b.totalPnl ?? 0) - (a.totalPnl ?? 0)).map((s, idx) => (
+                        <TableRow key={s.strategyId} className={idx === 0 ? "bg-success/5" : ""}>
+                          <TableCell className="font-semibold">
+                            {idx === 0 && <Star className="w-3.5 h-3.5 text-yellow-400 inline mr-1.5" />}
+                            {s.strategyName}
+                          </TableCell>
+                          <TableCell className="text-right">{s.totalTrades}</TableCell>
+                          <TableCell className={cn("text-right font-semibold", (s.winRate ?? 0) >= 55 ? "text-success" : (s.winRate ?? 0) >= 45 ? "text-yellow-400" : "text-destructive")}>
+                            {(s.winRate ?? 0).toFixed(1)}%
+                          </TableCell>
+                          <TableCell className={cn("text-right font-semibold", (s.totalPnl ?? 0) >= 0 ? "text-success" : "text-destructive")}>
+                            {formatCurrency(s.totalPnl ?? 0)}
+                          </TableCell>
+                          <TableCell className={cn("text-right", (s.avgPnl ?? 0) >= 0 ? "text-success" : "text-destructive")}>
+                            {formatCurrency(s.avgPnl ?? 0)}
+                          </TableCell>
+                          <TableCell className={cn("text-right", (s.profitFactor ?? 0) >= 1.5 ? "text-success" : (s.profitFactor ?? 0) >= 1 ? "text-yellow-400" : "text-destructive")}>
+                            {(s.profitFactor ?? 0).toFixed(2)}
+                          </TableCell>
+                          <TableCell className={cn("text-right", (s.maxDrawdown ?? 0) > 20 ? "text-destructive" : "text-foreground")}>
+                            {formatPercent(s.maxDrawdown ?? 0)}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <span className={cn("text-sm font-bold", idx === 0 ? "text-yellow-400" : "text-muted-foreground")}>#{idx + 1}</span>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+
+                  <div className="grid gap-6 lg:grid-cols-2 mt-6">
+                    <div>
+                      <p className="text-sm font-semibold mb-3">Win Rate by Strategy</p>
+                      <ResponsiveContainer width="100%" height={160}>
+                        <BarChart data={comparison ?? []} layout="vertical">
+                          <CartesianGrid strokeDasharray="3 3" className="stroke-muted/20" />
+                          <XAxis type="number" tick={{ fontSize: 10 }} unit="%" />
+                          <YAxis type="category" dataKey="strategyName" tick={{ fontSize: 10 }} width={80} />
+                          <RechartsTooltip formatter={(v: number) => `${v.toFixed(1)}%`} />
+                          <Bar dataKey="winRate" name="Win Rate" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold mb-3">Total P&L by Strategy</p>
+                      <ResponsiveContainer width="100%" height={160}>
+                        <BarChart data={comparison ?? []} layout="vertical">
+                          <CartesianGrid strokeDasharray="3 3" className="stroke-muted/20" />
+                          <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={v => `$${v}`} />
+                          <YAxis type="category" dataKey="strategyName" tick={{ fontSize: 10 }} width={80} />
+                          <RechartsTooltip formatter={(v: number) => formatCurrency(v)} />
+                          <Bar dataKey="totalPnl" name="Total P&L" radius={[0, 4, 4, 0]}>
+                            {(comparison ?? []).map((entry, idx) => (
+                              <Cell key={idx} fill={(entry.totalPnl ?? 0) >= 0 ? "#22c55e" : "#ef4444"} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ── LIFECYCLE ── */}
+        <TabsContent value="lifecycle" className="space-y-6 mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><GitBranch className="w-4 h-4" />Strategy Lifecycle Pipeline</CardTitle>
+              <CardDescription>Every strategy goes through staged validation before live deployment</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center gap-2 overflow-x-auto pb-2">
+                {[
+                  { stage: "Draft", desc: "Define rules and logic", icon: Edit3, color: "bg-muted/30 border-border text-muted-foreground" },
+                  { stage: "Backtest", desc: "Validate on historical data", icon: FlaskConical, color: "bg-blue-500/10 border-blue-500/30 text-blue-400" },
+                  { stage: "Paper Trade", desc: "Live simulation, no risk", icon: Activity, color: "bg-yellow-500/10 border-yellow-500/30 text-yellow-400" },
+                  { stage: "Optimize", desc: "AI parameter tuning", icon: Cpu, color: "bg-purple-500/10 border-purple-500/30 text-purple-400" },
+                  { stage: "Deploy Live", desc: "Real capital execution", icon: Rocket, color: "bg-success/10 border-success/30 text-success" },
+                ].map(({ stage, desc, icon: Icon, color }, i, arr) => (
+                  <div key={stage} className="flex items-center shrink-0">
+                    <div className={cn("p-3 rounded-xl border text-center min-w-[120px]", color)}>
+                      <Icon className="w-5 h-5 mx-auto mb-1" />
+                      <p className="text-sm font-semibold">{stage}</p>
+                      <p className="text-xs opacity-70">{desc}</p>
+                    </div>
+                    {i < arr.length - 1 && <ChevronRight className="w-5 h-5 text-muted-foreground mx-1 shrink-0" />}
+                  </div>
+                ))}
+              </div>
+
+              <Separator />
+
+              <div className="grid gap-4 sm:grid-cols-3">
+                {[
+                  { stage: "Backtest", reqs: ["Minimum 6 months of data", "≥100 trade signals", "Out-of-sample period reserved"], min: "Win Rate ≥45%, Max DD <25%" },
+                  { stage: "Paper Trading", reqs: ["Minimum 4 weeks", "≥50 paper trades", "Slippage and fees applied"], min: "Live performance matches backtest ±10%" },
+                  { stage: "Live Deployment", reqs: ["Risk rules validated", "Stop loss configured", "Position sizing set"], min: "Drawdown limit active, daily loss limit set" },
+                ].map(({ stage, reqs, min }) => (
+                  <Card key={stage}>
+                    <CardContent className="pt-4">
+                      <p className="font-semibold text-sm mb-3">{stage} Requirements</p>
+                      <ul className="space-y-1 mb-3">
+                        {reqs.map((r, i) => (
+                          <li key={i} className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                            <CheckCircle2 className="w-3 h-3 text-primary shrink-0 mt-0.5" />{r}
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="text-xs text-primary font-medium border-t border-border pt-2">{min}</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><Layers className="w-4 h-4" />Version Control</CardTitle>
+              <CardDescription>Strategies are versioned automatically on each update</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {[
+                  { action: "New strategy created", version: "v1", note: "Initial draft" },
+                  { action: "Rules updated", version: "v2", note: "Minor rule changes" },
+                  { action: "Major overhaul", version: "v3", note: "Complete strategy rebuild" },
+                ].map(({ action, version, note }, i) => (
+                  <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-muted/10 border border-border">
+                    <span className="font-mono text-xs bg-muted/30 px-2 py-0.5 rounded text-primary">{version}</span>
+                    <p className="text-sm flex-1">{action}</p>
+                    <p className="text-xs text-muted-foreground">{note}</p>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground mt-3">Version auto-increments on each PATCH. Compare versions to see parameter drift over time.</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
