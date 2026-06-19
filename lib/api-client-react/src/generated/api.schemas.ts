@@ -459,6 +459,184 @@ export interface ExperimentInput {
   notes?: string;
 }
 
+export interface JournalStats {
+  totalTrades: number;
+  openTrades: number;
+  closedTrades: number;
+  winningTrades: number;
+  losingTrades: number;
+  winRate: number;
+  avgRR: number;
+  totalPnl: number;
+  avgAiConfidence: number;
+  totalMistakes: number;
+  /** @nullable */
+  avgReviewScore?: number | null;
+  disciplineScore: number;
+}
+
+export interface TradeEvent {
+  id: number;
+  tradeId: number;
+  eventType: string;
+  description: string;
+  /** @nullable */
+  oldValue?: string | null;
+  /** @nullable */
+  newValue?: string | null;
+  timestamp: string;
+}
+
+export interface TradeEventInput {
+  eventType: string;
+  description: string;
+  oldValue?: string;
+  newValue?: string;
+  timestamp?: string;
+}
+
+export interface TradePsychology {
+  id: number;
+  tradeId: number;
+  /** @nullable */
+  preConfidence?: number | null;
+  /** @nullable */
+  preFear?: number | null;
+  /** @nullable */
+  preStress?: number | null;
+  /** @nullable */
+  preFocus?: number | null;
+  /** @nullable */
+  preEmotion?: string | null;
+  /** @nullable */
+  preNotes?: string | null;
+  /** @nullable */
+  postSatisfaction?: number | null;
+  /** @nullable */
+  postRegret?: number | null;
+  /** @nullable */
+  postConfidenceChange?: number | null;
+  /** @nullable */
+  postLearning?: string | null;
+  /** @nullable */
+  postNotes?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface TradePsychologyInput {
+  preConfidence?: number;
+  preFear?: number;
+  preStress?: number;
+  preFocus?: number;
+  preEmotion?: string;
+  preNotes?: string;
+  postSatisfaction?: number;
+  postRegret?: number;
+  postConfidenceChange?: number;
+  postLearning?: string;
+  postNotes?: string;
+}
+
+export interface TradeReview {
+  id: number;
+  tradeId: number;
+  /** @nullable */
+  entryScore?: number | null;
+  /** @nullable */
+  riskScore?: number | null;
+  /** @nullable */
+  exitScore?: number | null;
+  /** @nullable */
+  timingScore?: number | null;
+  /** @nullable */
+  overallScore?: number | null;
+  /** @nullable */
+  strengths?: string | null;
+  /** @nullable */
+  weaknesses?: string | null;
+  /** @nullable */
+  recommendations?: string | null;
+  aiGenerated: boolean;
+  createdAt: string;
+}
+
+export interface TradeReviewInput {
+  entryScore?: number;
+  riskScore?: number;
+  exitScore?: number;
+  timingScore?: number;
+  overallScore?: number;
+  strengths?: string;
+  weaknesses?: string;
+  recommendations?: string;
+  aiGenerated?: boolean;
+}
+
+export type TradeMistakeCategory = typeof TradeMistakeCategory[keyof typeof TradeMistakeCategory];
+
+
+export const TradeMistakeCategory = {
+  entry: 'entry',
+  exit: 'exit',
+  risk: 'risk',
+  strategy: 'strategy',
+  psychology: 'psychology',
+} as const;
+
+export type TradeMistakeSeverity = typeof TradeMistakeSeverity[keyof typeof TradeMistakeSeverity];
+
+
+export const TradeMistakeSeverity = {
+  low: 'low',
+  medium: 'medium',
+  high: 'high',
+  critical: 'critical',
+} as const;
+
+export interface TradeMistake {
+  id: number;
+  tradeId: number;
+  mistakeType: string;
+  category: TradeMistakeCategory;
+  severity: TradeMistakeSeverity;
+  description: string;
+  /** @nullable */
+  solution?: string | null;
+  aiDetected: boolean;
+  createdAt: string;
+}
+
+export type TradeMistakeInputCategory = typeof TradeMistakeInputCategory[keyof typeof TradeMistakeInputCategory];
+
+
+export const TradeMistakeInputCategory = {
+  entry: 'entry',
+  exit: 'exit',
+  risk: 'risk',
+  strategy: 'strategy',
+  psychology: 'psychology',
+} as const;
+
+export type TradeMistakeInputSeverity = typeof TradeMistakeInputSeverity[keyof typeof TradeMistakeInputSeverity];
+
+
+export const TradeMistakeInputSeverity = {
+  low: 'low',
+  medium: 'medium',
+  high: 'high',
+  critical: 'critical',
+} as const;
+
+export interface TradeMistakeInput {
+  mistakeType: string;
+  category: TradeMistakeInputCategory;
+  severity?: TradeMistakeInputSeverity;
+  description: string;
+  solution?: string;
+  aiDetected?: boolean;
+}
+
 export type PaperTradeSide = typeof PaperTradeSide[keyof typeof PaperTradeSide];
 
 

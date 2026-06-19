@@ -11,6 +11,7 @@ import systemRouter from "./system";
 import aiRouter from "./ai";
 import paperTradingRouter from "./paper-trading";
 import learningRouter from "./learning";
+import journalRouter from "./journal";
 
 const router: IRouter = Router();
 
@@ -19,6 +20,7 @@ router.use(marketRouter);
 router.use(strategiesRouter);
 router.use(signalsRouter);
 router.use(tradesRouter);
+router.use(journalRouter);
 router.use(analyticsRouter);
 router.use(dashboardRouter);
 router.use(backtestsRouter);

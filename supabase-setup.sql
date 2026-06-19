@@ -195,6 +195,61 @@ CREATE TABLE IF NOT EXISTS paper_trades (
   exit_time TIMESTAMPTZ
 );
 
+CREATE TABLE IF NOT EXISTS trade_events (
+  id SERIAL PRIMARY KEY,
+  trade_id INTEGER NOT NULL,
+  event_type TEXT NOT NULL,
+  description TEXT NOT NULL,
+  old_value TEXT,
+  new_value TEXT,
+  timestamp TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS trade_psychology (
+  id SERIAL PRIMARY KEY,
+  trade_id INTEGER NOT NULL UNIQUE,
+  pre_confidence INTEGER,
+  pre_fear INTEGER,
+  pre_stress INTEGER,
+  pre_focus INTEGER,
+  pre_emotion TEXT,
+  pre_notes TEXT,
+  post_satisfaction INTEGER,
+  post_regret INTEGER,
+  post_confidence_change INTEGER,
+  post_learning TEXT,
+  post_notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS trade_reviews (
+  id SERIAL PRIMARY KEY,
+  trade_id INTEGER NOT NULL UNIQUE,
+  entry_score INTEGER,
+  risk_score INTEGER,
+  exit_score INTEGER,
+  timing_score INTEGER,
+  overall_score INTEGER,
+  strengths TEXT,
+  weaknesses TEXT,
+  recommendations TEXT,
+  ai_generated BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS trade_mistakes (
+  id SERIAL PRIMARY KEY,
+  trade_id INTEGER NOT NULL,
+  mistake_type TEXT NOT NULL,
+  category TEXT NOT NULL,
+  severity TEXT NOT NULL DEFAULT 'medium',
+  description TEXT NOT NULL,
+  solution TEXT,
+  ai_detected BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- Enable Realtime for key tables
 ALTER PUBLICATION supabase_realtime ADD TABLE trades;
 ALTER PUBLICATION supabase_realtime ADD TABLE signals;

@@ -4,3 +4,4 @@ export * from "./signals";
 export * from "./trades";
 export * from "./analytics";
 export * from "./ai";
+export * from "./journal";

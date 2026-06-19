@@ -378,6 +378,222 @@ export const GetTradeReasonsResponse = zod.array(GetTradeReasonsResponseItem)
 
 
 /**
+ * @summary Get journal dashboard statistics
+ */
+export const GetJournalStatsResponse = zod.object({
+  "totalTrades": zod.number(),
+  "openTrades": zod.number(),
+  "closedTrades": zod.number(),
+  "winningTrades": zod.number(),
+  "losingTrades": zod.number(),
+  "winRate": zod.number(),
+  "avgRR": zod.number(),
+  "totalPnl": zod.number(),
+  "avgAiConfidence": zod.number(),
+  "totalMistakes": zod.number(),
+  "avgReviewScore": zod.number().nullish(),
+  "disciplineScore": zod.number()
+})
+
+
+/**
+ * @summary Get timeline events for a trade
+ */
+export const GetTradeEventsParams = zod.object({
+  "tradeId": zod.coerce.number()
+})
+
+export const GetTradeEventsResponseItem = zod.object({
+  "id": zod.number(),
+  "tradeId": zod.number(),
+  "eventType": zod.string(),
+  "description": zod.string(),
+  "oldValue": zod.string().nullish(),
+  "newValue": zod.string().nullish(),
+  "timestamp": zod.string()
+})
+export const GetTradeEventsResponse = zod.array(GetTradeEventsResponseItem)
+
+
+/**
+ * @summary Add a timeline event to a trade
+ */
+export const CreateTradeEventParams = zod.object({
+  "tradeId": zod.coerce.number()
+})
+
+export const CreateTradeEventBody = zod.object({
+  "eventType": zod.string(),
+  "description": zod.string(),
+  "oldValue": zod.string().optional(),
+  "newValue": zod.string().optional(),
+  "timestamp": zod.string().optional()
+})
+
+
+/**
+ * @summary Get psychology record for a trade
+ */
+export const GetTradePsychologyParams = zod.object({
+  "tradeId": zod.coerce.number()
+})
+
+export const GetTradePsychologyResponse = zod.object({
+  "id": zod.number(),
+  "tradeId": zod.number(),
+  "preConfidence": zod.number().nullish(),
+  "preFear": zod.number().nullish(),
+  "preStress": zod.number().nullish(),
+  "preFocus": zod.number().nullish(),
+  "preEmotion": zod.string().nullish(),
+  "preNotes": zod.string().nullish(),
+  "postSatisfaction": zod.number().nullish(),
+  "postRegret": zod.number().nullish(),
+  "postConfidenceChange": zod.number().nullish(),
+  "postLearning": zod.string().nullish(),
+  "postNotes": zod.string().nullish(),
+  "createdAt": zod.string().optional(),
+  "updatedAt": zod.string().optional()
+})
+
+
+/**
+ * @summary Create or update psychology record for a trade
+ */
+export const UpsertTradePsychologyParams = zod.object({
+  "tradeId": zod.coerce.number()
+})
+
+export const UpsertTradePsychologyBody = zod.object({
+  "preConfidence": zod.number().optional(),
+  "preFear": zod.number().optional(),
+  "preStress": zod.number().optional(),
+  "preFocus": zod.number().optional(),
+  "preEmotion": zod.string().optional(),
+  "preNotes": zod.string().optional(),
+  "postSatisfaction": zod.number().optional(),
+  "postRegret": zod.number().optional(),
+  "postConfidenceChange": zod.number().optional(),
+  "postLearning": zod.string().optional(),
+  "postNotes": zod.string().optional()
+})
+
+export const UpsertTradePsychologyResponse = zod.object({
+  "id": zod.number(),
+  "tradeId": zod.number(),
+  "preConfidence": zod.number().nullish(),
+  "preFear": zod.number().nullish(),
+  "preStress": zod.number().nullish(),
+  "preFocus": zod.number().nullish(),
+  "preEmotion": zod.string().nullish(),
+  "preNotes": zod.string().nullish(),
+  "postSatisfaction": zod.number().nullish(),
+  "postRegret": zod.number().nullish(),
+  "postConfidenceChange": zod.number().nullish(),
+  "postLearning": zod.string().nullish(),
+  "postNotes": zod.string().nullish(),
+  "createdAt": zod.string().optional(),
+  "updatedAt": zod.string().optional()
+})
+
+
+/**
+ * @summary Get AI review for a trade
+ */
+export const GetTradeReviewParams = zod.object({
+  "tradeId": zod.coerce.number()
+})
+
+export const GetTradeReviewResponse = zod.object({
+  "id": zod.number(),
+  "tradeId": zod.number(),
+  "entryScore": zod.number().nullish(),
+  "riskScore": zod.number().nullish(),
+  "exitScore": zod.number().nullish(),
+  "timingScore": zod.number().nullish(),
+  "overallScore": zod.number().nullish(),
+  "strengths": zod.string().nullish(),
+  "weaknesses": zod.string().nullish(),
+  "recommendations": zod.string().nullish(),
+  "aiGenerated": zod.boolean(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Generate AI review for a trade
+ */
+export const GenerateTradeReviewParams = zod.object({
+  "tradeId": zod.coerce.number()
+})
+
+export const GenerateTradeReviewBody = zod.object({
+  "entryScore": zod.number().optional(),
+  "riskScore": zod.number().optional(),
+  "exitScore": zod.number().optional(),
+  "timingScore": zod.number().optional(),
+  "overallScore": zod.number().optional(),
+  "strengths": zod.string().optional(),
+  "weaknesses": zod.string().optional(),
+  "recommendations": zod.string().optional(),
+  "aiGenerated": zod.boolean().optional()
+})
+
+export const GenerateTradeReviewResponse = zod.object({
+  "id": zod.number(),
+  "tradeId": zod.number(),
+  "entryScore": zod.number().nullish(),
+  "riskScore": zod.number().nullish(),
+  "exitScore": zod.number().nullish(),
+  "timingScore": zod.number().nullish(),
+  "overallScore": zod.number().nullish(),
+  "strengths": zod.string().nullish(),
+  "weaknesses": zod.string().nullish(),
+  "recommendations": zod.string().nullish(),
+  "aiGenerated": zod.boolean(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Get mistakes detected for a trade
+ */
+export const GetTradeMistakesParams = zod.object({
+  "tradeId": zod.coerce.number()
+})
+
+export const GetTradeMistakesResponseItem = zod.object({
+  "id": zod.number(),
+  "tradeId": zod.number(),
+  "mistakeType": zod.string(),
+  "category": zod.enum(['entry', 'exit', 'risk', 'strategy', 'psychology']),
+  "severity": zod.enum(['low', 'medium', 'high', 'critical']),
+  "description": zod.string(),
+  "solution": zod.string().nullish(),
+  "aiDetected": zod.boolean(),
+  "createdAt": zod.string()
+})
+export const GetTradeMistakesResponse = zod.array(GetTradeMistakesResponseItem)
+
+
+/**
+ * @summary Log a mistake for a trade
+ */
+export const CreateTradeMistakeParams = zod.object({
+  "tradeId": zod.coerce.number()
+})
+
+export const CreateTradeMistakeBody = zod.object({
+  "mistakeType": zod.string(),
+  "category": zod.enum(['entry', 'exit', 'risk', 'strategy', 'psychology']),
+  "severity": zod.enum(['low', 'medium', 'high', 'critical']).optional(),
+  "description": zod.string(),
+  "solution": zod.string().optional(),
+  "aiDetected": zod.boolean().optional()
+})
+
+
+/**
  * @summary Get overall performance metrics
  */
 export const GetPerformanceResponse = zod.object({

@@ -17,6 +17,8 @@ tags:
     description: Trading signals
   - name: trades
     description: Trade management
+  - name: journal
+    description: Trade journal - psychology, AI review, events, mistakes
   - name: analytics
     description: Performance analytics
   - name: dashboard
@@ -398,6 +400,196 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/TradeReason"
+
+  # ── TRADE JOURNAL ────────────────────────────────────────────────────────────
+  /journal/stats:
+    get:
+      operationId: getJournalStats
+      tags: [journal]
+      summary: Get journal dashboard statistics
+      responses:
+        "200":
+          description: Journal statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JournalStats"
+
+  /journal/events/{tradeId}:
+    get:
+      operationId: getTradeEvents
+      tags: [journal]
+      summary: Get timeline events for a trade
+      parameters:
+        - name: tradeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Trade events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TradeEvent"
+    post:
+      operationId: createTradeEvent
+      tags: [journal]
+      summary: Add a timeline event to a trade
+      parameters:
+        - name: tradeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TradeEventInput"
+      responses:
+        "201":
+          description: Event created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TradeEvent"
+
+  /journal/psychology/{tradeId}:
+    get:
+      operationId: getTradePsychology
+      tags: [journal]
+      summary: Get psychology record for a trade
+      parameters:
+        - name: tradeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Psychology record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TradePsychology"
+        "404":
+          description: Not found
+    post:
+      operationId: upsertTradePsychology
+      tags: [journal]
+      summary: Create or update psychology record for a trade
+      parameters:
+        - name: tradeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TradePsychologyInput"
+      responses:
+        "200":
+          description: Psychology record saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TradePsychology"
+
+  /journal/review/{tradeId}:
+    get:
+      operationId: getTradeReview
+      tags: [journal]
+      summary: Get AI review for a trade
+      parameters:
+        - name: tradeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Trade review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TradeReview"
+        "404":
+          description: Not found
+    post:
+      operationId: generateTradeReview
+      tags: [journal]
+      summary: Generate AI review for a trade
+      parameters:
+        - name: tradeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TradeReviewInput"
+      responses:
+        "200":
+          description: Generated review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TradeReview"
+
+  /journal/mistakes/{tradeId}:
+    get:
+      operationId: getTradeMistakes
+      tags: [journal]
+      summary: Get mistakes detected for a trade
+      parameters:
+        - name: tradeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Trade mistakes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TradeMistake"
+    post:
+      operationId: createTradeMistake
+      tags: [journal]
+      summary: Log a mistake for a trade
+      parameters:
+        - name: tradeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TradeMistakeInput"
+      responses:
+        "201":
+          description: Mistake logged
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TradeMistake"
 
   # ── ANALYTICS ────────────────────────────────────────────────────────────────
   /analytics/performance:
@@ -1361,6 +1553,226 @@ components:
           type: string
         notes:
           type: string
+
+    # ── TRADE JOURNAL ────────────────────────────────────────────────────────────
+    JournalStats:
+      type: object
+      required: [totalTrades, openTrades, closedTrades, winningTrades, losingTrades, winRate, avgRR, totalPnl, avgAiConfidence, totalMistakes, disciplineScore]
+      properties:
+        totalTrades:
+          type: integer
+        openTrades:
+          type: integer
+        closedTrades:
+          type: integer
+        winningTrades:
+          type: integer
+        losingTrades:
+          type: integer
+        winRate:
+          type: number
+        avgRR:
+          type: number
+        totalPnl:
+          type: number
+        avgAiConfidence:
+          type: number
+        totalMistakes:
+          type: integer
+        avgReviewScore:
+          type: ["integer", "null"]
+        disciplineScore:
+          type: integer
+
+    TradeEvent:
+      type: object
+      required: [id, tradeId, eventType, description, timestamp]
+      properties:
+        id:
+          type: integer
+        tradeId:
+          type: integer
+        eventType:
+          type: string
+        description:
+          type: string
+        oldValue:
+          type: ["string", "null"]
+        newValue:
+          type: ["string", "null"]
+        timestamp:
+          type: string
+
+    TradeEventInput:
+      type: object
+      required: [eventType, description]
+      properties:
+        eventType:
+          type: string
+        description:
+          type: string
+        oldValue:
+          type: string
+        newValue:
+          type: string
+        timestamp:
+          type: string
+
+    TradePsychology:
+      type: object
+      required: [id, tradeId]
+      properties:
+        id:
+          type: integer
+        tradeId:
+          type: integer
+        preConfidence:
+          type: ["integer", "null"]
+        preFear:
+          type: ["integer", "null"]
+        preStress:
+          type: ["integer", "null"]
+        preFocus:
+          type: ["integer", "null"]
+        preEmotion:
+          type: ["string", "null"]
+        preNotes:
+          type: ["string", "null"]
+        postSatisfaction:
+          type: ["integer", "null"]
+        postRegret:
+          type: ["integer", "null"]
+        postConfidenceChange:
+          type: ["integer", "null"]
+        postLearning:
+          type: ["string", "null"]
+        postNotes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    TradePsychologyInput:
+      type: object
+      properties:
+        preConfidence:
+          type: integer
+        preFear:
+          type: integer
+        preStress:
+          type: integer
+        preFocus:
+          type: integer
+        preEmotion:
+          type: string
+        preNotes:
+          type: string
+        postSatisfaction:
+          type: integer
+        postRegret:
+          type: integer
+        postConfidenceChange:
+          type: integer
+        postLearning:
+          type: string
+        postNotes:
+          type: string
+
+    TradeReview:
+      type: object
+      required: [id, tradeId, aiGenerated, createdAt]
+      properties:
+        id:
+          type: integer
+        tradeId:
+          type: integer
+        entryScore:
+          type: ["integer", "null"]
+        riskScore:
+          type: ["integer", "null"]
+        exitScore:
+          type: ["integer", "null"]
+        timingScore:
+          type: ["integer", "null"]
+        overallScore:
+          type: ["integer", "null"]
+        strengths:
+          type: ["string", "null"]
+        weaknesses:
+          type: ["string", "null"]
+        recommendations:
+          type: ["string", "null"]
+        aiGenerated:
+          type: boolean
+        createdAt:
+          type: string
+
+    TradeReviewInput:
+      type: object
+      properties:
+        entryScore:
+          type: integer
+        riskScore:
+          type: integer
+        exitScore:
+          type: integer
+        timingScore:
+          type: integer
+        overallScore:
+          type: integer
+        strengths:
+          type: string
+        weaknesses:
+          type: string
+        recommendations:
+          type: string
+        aiGenerated:
+          type: boolean
+
+    TradeMistake:
+      type: object
+      required: [id, tradeId, mistakeType, category, severity, description, aiDetected, createdAt]
+      properties:
+        id:
+          type: integer
+        tradeId:
+          type: integer
+        mistakeType:
+          type: string
+        category:
+          type: string
+          enum: [entry, exit, risk, strategy, psychology]
+        severity:
+          type: string
+          enum: [low, medium, high, critical]
+        description:
+          type: string
+        solution:
+          type: ["string", "null"]
+        aiDetected:
+          type: boolean
+        createdAt:
+          type: string
+
+    TradeMistakeInput:
+      type: object
+      required: [mistakeType, category, description]
+      properties:
+        mistakeType:
+          type: string
+        category:
+          type: string
+          enum: [entry, exit, risk, strategy, psychology]
+        severity:
+          type: string
+          enum: [low, medium, high, critical]
+        description:
+          type: string
+        solution:
+          type: string
+        aiDetected:
+          type: boolean
 
     # ── PAPER TRADES ──────────────────────────────────────────────────────────────
     PaperTrade:

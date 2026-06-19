@@ -37,6 +37,7 @@ import type {
   GetSystemLogsParams,
   HealthStatus,
   Indicators,
+  JournalStats,
   ListSignalsParams,
   ListTradesParams,
   MarketPrice,
@@ -54,8 +55,16 @@ import type {
   SystemLog,
   SystemStatus,
   Trade,
+  TradeEvent,
+  TradeEventInput,
   TradeInput,
+  TradeMistake,
+  TradeMistakeInput,
+  TradePsychology,
+  TradePsychologyInput,
   TradeReason,
+  TradeReview,
+  TradeReviewInput,
   TradeUpdate
 } from './api.schemas';
 
@@ -1440,6 +1449,679 @@ export function useGetTradeReasons<TData = Awaited<ReturnType<typeof getTradeRea
 
 
 
+
+export const getGetJournalStatsUrl = () => {
+
+
+
+
+  return `/api/journal/stats`
+}
+
+/**
+ * @summary Get journal dashboard statistics
+ */
+export const getJournalStats = async ( options?: RequestInit): Promise<JournalStats> => {
+
+  return customFetch<JournalStats>(getGetJournalStatsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetJournalStatsQueryKey = () => {
+    return [
+    `/api/journal/stats`
+    ] as const;
+    }
+
+
+export const getGetJournalStatsQueryOptions = <TData = Awaited<ReturnType<typeof getJournalStats>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getJournalStats>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetJournalStatsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getJournalStats>>> = ({ signal }) => getJournalStats({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getJournalStats>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetJournalStatsQueryResult = NonNullable<Awaited<ReturnType<typeof getJournalStats>>>
+export type GetJournalStatsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get journal dashboard statistics
+ */
+
+export function useGetJournalStats<TData = Awaited<ReturnType<typeof getJournalStats>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getJournalStats>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetJournalStatsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetTradeEventsUrl = (tradeId: number,) => {
+
+
+
+
+  return `/api/journal/events/${tradeId}`
+}
+
+/**
+ * @summary Get timeline events for a trade
+ */
+export const getTradeEvents = async (tradeId: number, options?: RequestInit): Promise<TradeEvent[]> => {
+
+  return customFetch<TradeEvent[]>(getGetTradeEventsUrl(tradeId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetTradeEventsQueryKey = (tradeId: number,) => {
+    return [
+    `/api/journal/events/${tradeId}`
+    ] as const;
+    }
+
+
+export const getGetTradeEventsQueryOptions = <TData = Awaited<ReturnType<typeof getTradeEvents>>, TError = ErrorType<unknown>>(tradeId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTradeEvents>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTradeEventsQueryKey(tradeId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTradeEvents>>> = ({ signal }) => getTradeEvents(tradeId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(tradeId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTradeEvents>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetTradeEventsQueryResult = NonNullable<Awaited<ReturnType<typeof getTradeEvents>>>
+export type GetTradeEventsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get timeline events for a trade
+ */
+
+export function useGetTradeEvents<TData = Awaited<ReturnType<typeof getTradeEvents>>, TError = ErrorType<unknown>>(
+ tradeId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTradeEvents>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetTradeEventsQueryOptions(tradeId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateTradeEventUrl = (tradeId: number,) => {
+
+
+
+
+  return `/api/journal/events/${tradeId}`
+}
+
+/**
+ * @summary Add a timeline event to a trade
+ */
+export const createTradeEvent = async (tradeId: number,
+    tradeEventInput: TradeEventInput, options?: RequestInit): Promise<TradeEvent> => {
+
+  return customFetch<TradeEvent>(getCreateTradeEventUrl(tradeId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      tradeEventInput,)
+  }
+);}
+
+
+
+
+export const getCreateTradeEventMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTradeEvent>>, TError,{tradeId: number;data: BodyType<TradeEventInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createTradeEvent>>, TError,{tradeId: number;data: BodyType<TradeEventInput>}, TContext> => {
+
+const mutationKey = ['createTradeEvent'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createTradeEvent>>, {tradeId: number;data: BodyType<TradeEventInput>}> = (props) => {
+          const {tradeId,data} = props ?? {};
+
+          return  createTradeEvent(tradeId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateTradeEventMutationResult = NonNullable<Awaited<ReturnType<typeof createTradeEvent>>>
+    export type CreateTradeEventMutationBody = BodyType<TradeEventInput>
+    export type CreateTradeEventMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Add a timeline event to a trade
+ */
+export const useCreateTradeEvent = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTradeEvent>>, TError,{tradeId: number;data: BodyType<TradeEventInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createTradeEvent>>,
+        TError,
+        {tradeId: number;data: BodyType<TradeEventInput>},
+        TContext
+      > => {
+      return useMutation(getCreateTradeEventMutationOptions(options));
+    }
+
+export const getGetTradePsychologyUrl = (tradeId: number,) => {
+
+
+
+
+  return `/api/journal/psychology/${tradeId}`
+}
+
+/**
+ * @summary Get psychology record for a trade
+ */
+export const getTradePsychology = async (tradeId: number, options?: RequestInit): Promise<TradePsychology> => {
+
+  return customFetch<TradePsychology>(getGetTradePsychologyUrl(tradeId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetTradePsychologyQueryKey = (tradeId: number,) => {
+    return [
+    `/api/journal/psychology/${tradeId}`
+    ] as const;
+    }
+
+
+export const getGetTradePsychologyQueryOptions = <TData = Awaited<ReturnType<typeof getTradePsychology>>, TError = ErrorType<void>>(tradeId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTradePsychology>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTradePsychologyQueryKey(tradeId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTradePsychology>>> = ({ signal }) => getTradePsychology(tradeId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(tradeId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTradePsychology>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetTradePsychologyQueryResult = NonNullable<Awaited<ReturnType<typeof getTradePsychology>>>
+export type GetTradePsychologyQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get psychology record for a trade
+ */
+
+export function useGetTradePsychology<TData = Awaited<ReturnType<typeof getTradePsychology>>, TError = ErrorType<void>>(
+ tradeId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTradePsychology>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetTradePsychologyQueryOptions(tradeId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpsertTradePsychologyUrl = (tradeId: number,) => {
+
+
+
+
+  return `/api/journal/psychology/${tradeId}`
+}
+
+/**
+ * @summary Create or update psychology record for a trade
+ */
+export const upsertTradePsychology = async (tradeId: number,
+    tradePsychologyInput: TradePsychologyInput, options?: RequestInit): Promise<TradePsychology> => {
+
+  return customFetch<TradePsychology>(getUpsertTradePsychologyUrl(tradeId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      tradePsychologyInput,)
+  }
+);}
+
+
+
+
+export const getUpsertTradePsychologyMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertTradePsychology>>, TError,{tradeId: number;data: BodyType<TradePsychologyInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof upsertTradePsychology>>, TError,{tradeId: number;data: BodyType<TradePsychologyInput>}, TContext> => {
+
+const mutationKey = ['upsertTradePsychology'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof upsertTradePsychology>>, {tradeId: number;data: BodyType<TradePsychologyInput>}> = (props) => {
+          const {tradeId,data} = props ?? {};
+
+          return  upsertTradePsychology(tradeId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpsertTradePsychologyMutationResult = NonNullable<Awaited<ReturnType<typeof upsertTradePsychology>>>
+    export type UpsertTradePsychologyMutationBody = BodyType<TradePsychologyInput>
+    export type UpsertTradePsychologyMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Create or update psychology record for a trade
+ */
+export const useUpsertTradePsychology = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertTradePsychology>>, TError,{tradeId: number;data: BodyType<TradePsychologyInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof upsertTradePsychology>>,
+        TError,
+        {tradeId: number;data: BodyType<TradePsychologyInput>},
+        TContext
+      > => {
+      return useMutation(getUpsertTradePsychologyMutationOptions(options));
+    }
+
+export const getGetTradeReviewUrl = (tradeId: number,) => {
+
+
+
+
+  return `/api/journal/review/${tradeId}`
+}
+
+/**
+ * @summary Get AI review for a trade
+ */
+export const getTradeReview = async (tradeId: number, options?: RequestInit): Promise<TradeReview> => {
+
+  return customFetch<TradeReview>(getGetTradeReviewUrl(tradeId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetTradeReviewQueryKey = (tradeId: number,) => {
+    return [
+    `/api/journal/review/${tradeId}`
+    ] as const;
+    }
+
+
+export const getGetTradeReviewQueryOptions = <TData = Awaited<ReturnType<typeof getTradeReview>>, TError = ErrorType<void>>(tradeId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTradeReview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTradeReviewQueryKey(tradeId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTradeReview>>> = ({ signal }) => getTradeReview(tradeId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(tradeId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTradeReview>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetTradeReviewQueryResult = NonNullable<Awaited<ReturnType<typeof getTradeReview>>>
+export type GetTradeReviewQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get AI review for a trade
+ */
+
+export function useGetTradeReview<TData = Awaited<ReturnType<typeof getTradeReview>>, TError = ErrorType<void>>(
+ tradeId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTradeReview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetTradeReviewQueryOptions(tradeId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGenerateTradeReviewUrl = (tradeId: number,) => {
+
+
+
+
+  return `/api/journal/review/${tradeId}`
+}
+
+/**
+ * @summary Generate AI review for a trade
+ */
+export const generateTradeReview = async (tradeId: number,
+    tradeReviewInput: TradeReviewInput, options?: RequestInit): Promise<TradeReview> => {
+
+  return customFetch<TradeReview>(getGenerateTradeReviewUrl(tradeId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      tradeReviewInput,)
+  }
+);}
+
+
+
+
+export const getGenerateTradeReviewMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateTradeReview>>, TError,{tradeId: number;data: BodyType<TradeReviewInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof generateTradeReview>>, TError,{tradeId: number;data: BodyType<TradeReviewInput>}, TContext> => {
+
+const mutationKey = ['generateTradeReview'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof generateTradeReview>>, {tradeId: number;data: BodyType<TradeReviewInput>}> = (props) => {
+          const {tradeId,data} = props ?? {};
+
+          return  generateTradeReview(tradeId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GenerateTradeReviewMutationResult = NonNullable<Awaited<ReturnType<typeof generateTradeReview>>>
+    export type GenerateTradeReviewMutationBody = BodyType<TradeReviewInput>
+    export type GenerateTradeReviewMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Generate AI review for a trade
+ */
+export const useGenerateTradeReview = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateTradeReview>>, TError,{tradeId: number;data: BodyType<TradeReviewInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof generateTradeReview>>,
+        TError,
+        {tradeId: number;data: BodyType<TradeReviewInput>},
+        TContext
+      > => {
+      return useMutation(getGenerateTradeReviewMutationOptions(options));
+    }
+
+export const getGetTradeMistakesUrl = (tradeId: number,) => {
+
+
+
+
+  return `/api/journal/mistakes/${tradeId}`
+}
+
+/**
+ * @summary Get mistakes detected for a trade
+ */
+export const getTradeMistakes = async (tradeId: number, options?: RequestInit): Promise<TradeMistake[]> => {
+
+  return customFetch<TradeMistake[]>(getGetTradeMistakesUrl(tradeId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetTradeMistakesQueryKey = (tradeId: number,) => {
+    return [
+    `/api/journal/mistakes/${tradeId}`
+    ] as const;
+    }
+
+
+export const getGetTradeMistakesQueryOptions = <TData = Awaited<ReturnType<typeof getTradeMistakes>>, TError = ErrorType<unknown>>(tradeId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTradeMistakes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTradeMistakesQueryKey(tradeId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTradeMistakes>>> = ({ signal }) => getTradeMistakes(tradeId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(tradeId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTradeMistakes>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetTradeMistakesQueryResult = NonNullable<Awaited<ReturnType<typeof getTradeMistakes>>>
+export type GetTradeMistakesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get mistakes detected for a trade
+ */
+
+export function useGetTradeMistakes<TData = Awaited<ReturnType<typeof getTradeMistakes>>, TError = ErrorType<unknown>>(
+ tradeId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTradeMistakes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetTradeMistakesQueryOptions(tradeId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateTradeMistakeUrl = (tradeId: number,) => {
+
+
+
+
+  return `/api/journal/mistakes/${tradeId}`
+}
+
+/**
+ * @summary Log a mistake for a trade
+ */
+export const createTradeMistake = async (tradeId: number,
+    tradeMistakeInput: TradeMistakeInput, options?: RequestInit): Promise<TradeMistake> => {
+
+  return customFetch<TradeMistake>(getCreateTradeMistakeUrl(tradeId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      tradeMistakeInput,)
+  }
+);}
+
+
+
+
+export const getCreateTradeMistakeMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTradeMistake>>, TError,{tradeId: number;data: BodyType<TradeMistakeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createTradeMistake>>, TError,{tradeId: number;data: BodyType<TradeMistakeInput>}, TContext> => {
+
+const mutationKey = ['createTradeMistake'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createTradeMistake>>, {tradeId: number;data: BodyType<TradeMistakeInput>}> = (props) => {
+          const {tradeId,data} = props ?? {};
+
+          return  createTradeMistake(tradeId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateTradeMistakeMutationResult = NonNullable<Awaited<ReturnType<typeof createTradeMistake>>>
+    export type CreateTradeMistakeMutationBody = BodyType<TradeMistakeInput>
+    export type CreateTradeMistakeMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Log a mistake for a trade
+ */
+export const useCreateTradeMistake = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTradeMistake>>, TError,{tradeId: number;data: BodyType<TradeMistakeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createTradeMistake>>,
+        TError,
+        {tradeId: number;data: BodyType<TradeMistakeInput>},
+        TContext
+      > => {
+      return useMutation(getCreateTradeMistakeMutationOptions(options));
+    }
 
 export const getGetPerformanceUrl = () => {
 
