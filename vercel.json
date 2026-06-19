@@ -1,7 +1,7 @@
 {
   "version": 2,
   "buildCommand": "pnpm --filter @workspace/aegis-quant run build",
-  "outputDirectory": "public",
+  "outputDirectory": "artifacts/aegis-quant/dist",
   "installCommand": "pnpm install --frozen-lockfile",
   "rewrites": [
     { "source": "/((?!api/).*)", "destination": "/index.html" }
