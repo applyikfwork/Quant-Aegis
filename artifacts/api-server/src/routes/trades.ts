@@ -13,68 +13,73 @@ import {
 
 const router: IRouter = Router();
 
+// Build open positions + closed trades from paper-state (unified account)
+function paperTrades(statusFilter?: string, symbolFilter?: string, limit = 50) {
+  const openPos = computePositions().map(p => ({
+    id: p.id, symbol: p.symbol, strategyId: null, side: p.side,
+    entryPrice: p.entryPrice, exitPrice: null, quantity: p.quantity,
+    stopLoss: p.stopLoss ?? null, takeProfit: p.takeProfit ?? null,
+    profitLoss: p.unrealizedPnl, profitPercent: p.unrealizedPnlPct,
+    status: "open", aiConfidence: null, timeframe: "1h",
+    entryTime: p.openTime, exitTime: null, createdAt: p.openTime,
+    strategyName: p.strategy ?? null, tradeType: "paper", signalId: null, decisionId: null,
+  }));
+  const closedT = getClosedTrades().map(t => ({
+    id: t.id, symbol: t.symbol, strategyId: null, side: t.side,
+    entryPrice: t.entryPrice, exitPrice: t.exitPrice, quantity: t.quantity,
+    stopLoss: null, takeProfit: null, profitLoss: t.pnl, profitPercent: t.pnlPct,
+    status: "closed", aiConfidence: null, timeframe: "1h",
+    entryTime: t.openTime, exitTime: t.closeTime, createdAt: t.openTime,
+    strategyName: t.strategy ?? null, tradeType: "paper", signalId: null, decisionId: null,
+  }));
+  let all = statusFilter === "open" ? openPos
+    : statusFilter === "closed" ? closedT
+    : [...openPos, ...closedT];
+  if (symbolFilter) all = all.filter(t => t.symbol === symbolFilter);
+  return all.slice(0, limit);
+}
+
 router.get("/trades", async (req, res): Promise<void> => {
+  const query = ListTradesQueryParams.safeParse(req.query);
+  const statusFilter = query.success ? query.data.status : undefined;
+  const symbolFilter = query.success ? query.data.symbol : undefined;
+  const limit = (query.success ? query.data.limit : undefined) ?? 50;
+
+  // Always serve paper-state when offline
   if (isOfflineMode) {
-    const query = ListTradesQueryParams.safeParse(req.query);
-    const statusFilter = query.success ? query.data.status : undefined;
-    const symbolFilter = query.success ? query.data.symbol : undefined;
-    const limit = (query.success ? query.data.limit : undefined) ?? 50;
-
-    const openPos = computePositions().map(p => ({
-      id: p.id, symbol: p.symbol, strategyId: null, side: p.side,
-      entryPrice: p.entryPrice, exitPrice: null, quantity: p.quantity,
-      stopLoss: p.stopLoss ?? null, takeProfit: p.takeProfit ?? null,
-      profitLoss: p.unrealizedPnl, profitPercent: p.unrealizedPnlPct,
-      status: "open", aiConfidence: null, timeframe: "1h",
-      entryTime: p.openTime, exitTime: null, createdAt: p.openTime,
-      strategyName: p.strategy ?? null, tradeType: "journal", signalId: null, decisionId: null,
-    }));
-
-    const closedT = getClosedTrades().map(t => ({
-      id: t.id, symbol: t.symbol, strategyId: null, side: t.side,
-      entryPrice: t.entryPrice, exitPrice: t.exitPrice, quantity: t.quantity,
-      stopLoss: null, takeProfit: null,
-      profitLoss: t.pnl, profitPercent: t.pnlPct,
-      status: "closed", aiConfidence: null, timeframe: "1h",
-      entryTime: t.openTime, exitTime: t.closeTime, createdAt: t.openTime,
-      strategyName: t.strategy ?? null, tradeType: "journal", signalId: null, decisionId: null,
-    }));
-
-    let all = statusFilter === "open" ? openPos
-      : statusFilter === "closed" ? closedT
-      : [...openPos, ...closedT];
-
-    if (symbolFilter) all = all.filter(t => t.symbol === symbolFilter);
-    res.json(all.slice(0, limit));
+    res.json(paperTrades(statusFilter, symbolFilter, limit));
     return;
   }
 
-  const query = ListTradesQueryParams.safeParse(req.query);
-  if (!query.success) { res.status(400).json({ error: query.error.message }); return; }
-
-  // Default: return journal trades only (trade_type='journal') for the Trade Journal module
-  let q = supabase
+  // Try Supabase — detect missing table by checking for pg error codes
+  const { data, error } = await supabase
     .from("trades")
     .select("*, strategies(name)")
-    .eq("trade_type", "journal")
     .order("created_at", { ascending: false })
-    .limit(query.data.limit ?? 50);
+    .limit(limit);
 
-  if (query.data.status) q = q.eq("status", query.data.status);
-  if (query.data.symbol) q = q.eq("symbol", query.data.symbol);
-
-  const { data, error } = await q;
-  // Gracefully handle missing table (tables not yet created in Supabase)
+  // Missing table → fall back to paper-state
   if (error) {
-    if (error.message?.includes("does not exist") || error.message?.includes("schema cache")) {
-      res.json([]);
+    if (error.message?.includes("does not exist") || error.message?.includes("schema cache") || error.message?.includes("relation")) {
+      res.json(paperTrades(statusFilter, symbolFilter, limit));
       return;
     }
     res.status(500).json({ error: error.message });
     return;
   }
 
-  res.json((data ?? []).map(t => ({
+  // If DB exists but is completely empty, serve paper-state as unified account data
+  if (!data || data.length === 0) {
+    res.json(paperTrades(statusFilter, symbolFilter, limit));
+    return;
+  }
+
+  // DB has real data — filter and return journal trades
+  let rows = data.filter(t => t.trade_type === "journal" || !t.trade_type);
+  if (statusFilter) rows = rows.filter(t => t.status === statusFilter);
+  if (symbolFilter) rows = rows.filter(t => t.symbol === symbolFilter);
+
+  res.json(rows.map(t => ({
     id: t.id, symbol: t.symbol, strategyId: t.strategy_id, side: t.side,
     entryPrice: t.entry_price, exitPrice: t.exit_price, quantity: t.quantity,
     stopLoss: t.stop_loss, takeProfit: t.take_profit, profitLoss: t.profit_loss,
@@ -109,7 +114,6 @@ router.post("/trades", async (req, res): Promise<void> => {
     );
   }
 
-  // If linked to a signal, mark signal as active
   if (trade.signal_id) {
     await supabase.from("signals").update({ status: "active" }).eq("id", trade.signal_id);
   }
@@ -141,6 +145,15 @@ router.post("/trades", async (req, res): Promise<void> => {
 router.get("/trades/:id", async (req, res): Promise<void> => {
   const params = GetTradeParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+
+  // Check paper-state first if offline or tables missing
+  if (isOfflineMode) {
+    const all = paperTrades();
+    const found = all.find(t => t.id === params.data.id);
+    if (found) { res.json(found); return; }
+    res.status(404).json({ error: "Trade not found" });
+    return;
+  }
 
   const { data: trade, error } = await supabase
     .from("trades").select("*, strategies(name)").eq("id", params.data.id).single();
@@ -193,7 +206,6 @@ router.patch("/trades/:id", async (req, res): Promise<void> => {
       symbol: current.symbol, value: pnl,
     });
 
-    // Auto-create AI feedback if trade was linked to a signal/decision
     if (current.signal_id || current.decision_id) {
       const isWin = pnl > 0;
       await supabase.from("ai_feedback").insert({
@@ -208,18 +220,14 @@ router.patch("/trades/:id", async (req, res): Promise<void> => {
       });
     }
 
-    // If linked to signal, mark it completed
     if (current.signal_id) {
       await supabase.from("signals").update({ status: "completed" }).eq("id", current.signal_id);
     }
 
-    // Update strategy win stats if strategy linked
     if (current.strategy_id) {
       const { data: stratTrades } = await supabase
-        .from("trades")
-        .select("profit_loss")
-        .eq("strategy_id", current.strategy_id)
-        .eq("status", "closed");
+        .from("trades").select("profit_loss")
+        .eq("strategy_id", current.strategy_id).eq("status", "closed");
       const allStratTrades = [...(stratTrades ?? []), { profit_loss: pnl }];
       const wins = allStratTrades.filter(t => (t.profit_loss ?? 0) > 0);
       const winRate = allStratTrades.length > 0 ? (wins.length / allStratTrades.length) * 100 : 0;

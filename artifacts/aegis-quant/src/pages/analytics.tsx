@@ -267,7 +267,7 @@ function OverviewSection({ perf, loadingPerf }: { perf: any; loadingPerf: boolea
       />
 
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
-        <StatCard title="Portfolio Value" value={perf ? formatCurrency(10000 + (perf.totalPnl ?? 0)) : "—"} icon={Wallet} iconColor="text-blue-400" loading={loadingPerf} />
+        <StatCard title="Portfolio Value" value={perf ? formatCurrency(100000 + (perf.totalPnl ?? 0)) : "—"} icon={Wallet} iconColor="text-blue-400" loading={loadingPerf} />
         <StatCard title="AI Accuracy" value={perf ? `${perf.winRate?.toFixed(1)}%` : "—"} icon={Brain} iconColor="text-cyan-400" loading={loadingPerf} />
         <StatCard title="Active Strategies" value="—" sub="No strategies yet" icon={Target} iconColor="text-purple-400" />
         <StatCard title="Risk Score" value="—" sub="No trades yet" icon={ShieldCheck} iconColor="text-green-400" />
@@ -357,7 +357,7 @@ function PerformanceSection({ perf, loadingPerf, daily, loadingDaily }: any) {
       <SectionHeader title="Performance Analytics" desc="Professional return calculations, capital growth tracking, and risk-adjusted metrics." />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard title="Total Return" value={perf ? `${perf.totalPnl >= 0 ? "+" : ""}${formatPercent(perf.totalPnl / 10000 * 100)}` : "—"} icon={TrendingUp} iconColor="text-green-400" loading={loadingPerf} />
+        <StatCard title="Total Return" value={perf ? `${perf.totalPnl >= 0 ? "+" : ""}${formatPercent(perf.totalPnl / 100000 * 100)}` : "—"} icon={TrendingUp} iconColor="text-green-400" loading={loadingPerf} />
         <StatCard title="Sharpe Ratio" value={perf ? formatNumber(perf.sharpeRatio) : "—"} sub="Risk-adjusted return" icon={Target} iconColor="text-blue-400" loading={loadingPerf} />
         <StatCard title="Max Drawdown" value={perf ? formatPercent(perf.maxDrawdown) : "—"} sub="Worst peak-to-trough" icon={TrendingDown} iconColor="text-red-400" loading={loadingPerf} />
         <StatCard title="Profit Factor" value={perf ? formatNumber(perf.profitFactor) : "—"} sub="Gross profit ÷ loss" icon={BarChart2} iconColor="text-purple-400" loading={loadingPerf} />
