@@ -10,8 +10,6 @@ if (isOfflineMode) {
   console.warn("[supabase] SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not set — running in offline mode. Database calls will return empty data.");
 }
 
-// Only create the client when real credentials are present
-// `transport: ws` fixes "Node.js 20 detected without native WebSocket support" error
 export const supabase = isOfflineMode
   ? null as unknown as ReturnType<typeof createClient>
   : createClient(supabaseUrl, supabaseKey, {
@@ -29,9 +27,12 @@ export async function setupTables(): Promise<void> {
     );
     CREATE TABLE IF NOT EXISTS trades (
       id SERIAL PRIMARY KEY, symbol TEXT NOT NULL, strategy_id INTEGER REFERENCES strategies(id),
+      signal_id INTEGER, decision_id INTEGER,
+      trade_type TEXT NOT NULL DEFAULT 'journal',
       side TEXT NOT NULL, entry_price REAL NOT NULL, exit_price REAL, quantity REAL NOT NULL,
       stop_loss REAL, take_profit REAL, profit_loss REAL, profit_percent REAL,
       status TEXT NOT NULL DEFAULT 'open', ai_confidence REAL, timeframe TEXT,
+      leverage REAL DEFAULT 1, margin REAL, unrealized_pnl REAL, notes TEXT,
       entry_time TIMESTAMPTZ NOT NULL DEFAULT now(), exit_time TIMESTAMPTZ,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now(), updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
@@ -41,7 +42,10 @@ export async function setupTables(): Promise<void> {
     );
     CREATE TABLE IF NOT EXISTS signals (
       id SERIAL PRIMARY KEY, symbol TEXT NOT NULL, strategy_id INTEGER REFERENCES strategies(id),
+      decision_id INTEGER,
       signal_type TEXT NOT NULL, confidence REAL NOT NULL, reason TEXT,
+      entry_price REAL, stop_loss REAL, tp1 REAL, tp2 REAL, tp3 REAL,
+      timeframe TEXT, risk_reward REAL, agent_votes JSONB, market_snapshot JSONB,
       status TEXT NOT NULL DEFAULT 'pending', created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
     CREATE TABLE IF NOT EXISTS market_candles (
@@ -109,8 +113,38 @@ export async function setupTables(): Promise<void> {
       symbol TEXT NOT NULL, side TEXT NOT NULL, entry_price REAL NOT NULL,
       exit_price REAL, quantity REAL NOT NULL, stop_loss REAL, take_profit REAL,
       profit_loss REAL, profit_percent REAL, status TEXT NOT NULL DEFAULT 'open',
+      trade_ref_id INTEGER REFERENCES trades(id),
       entry_time TIMESTAMPTZ NOT NULL DEFAULT now(), exit_time TIMESTAMPTZ
     );
+    CREATE TABLE IF NOT EXISTS notifications (
+      id SERIAL PRIMARY KEY, title TEXT NOT NULL, message TEXT NOT NULL,
+      priority TEXT NOT NULL DEFAULT 'MEDIUM', category TEXT NOT NULL DEFAULT 'system',
+      status TEXT NOT NULL DEFAULT 'unread', action TEXT,
+      related_id INTEGER, related_type TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+
+    -- Add new columns to existing tables if they don't exist
+    ALTER TABLE trades ADD COLUMN IF NOT EXISTS trade_type TEXT DEFAULT 'journal';
+    ALTER TABLE trades ADD COLUMN IF NOT EXISTS signal_id INTEGER;
+    ALTER TABLE trades ADD COLUMN IF NOT EXISTS decision_id INTEGER;
+    ALTER TABLE trades ADD COLUMN IF NOT EXISTS leverage REAL DEFAULT 1;
+    ALTER TABLE trades ADD COLUMN IF NOT EXISTS margin REAL;
+    ALTER TABLE trades ADD COLUMN IF NOT EXISTS unrealized_pnl REAL;
+    ALTER TABLE trades ADD COLUMN IF NOT EXISTS notes TEXT;
+
+    ALTER TABLE signals ADD COLUMN IF NOT EXISTS decision_id INTEGER;
+    ALTER TABLE signals ADD COLUMN IF NOT EXISTS entry_price REAL;
+    ALTER TABLE signals ADD COLUMN IF NOT EXISTS stop_loss REAL;
+    ALTER TABLE signals ADD COLUMN IF NOT EXISTS tp1 REAL;
+    ALTER TABLE signals ADD COLUMN IF NOT EXISTS tp2 REAL;
+    ALTER TABLE signals ADD COLUMN IF NOT EXISTS tp3 REAL;
+    ALTER TABLE signals ADD COLUMN IF NOT EXISTS timeframe TEXT;
+    ALTER TABLE signals ADD COLUMN IF NOT EXISTS risk_reward REAL;
+    ALTER TABLE signals ADD COLUMN IF NOT EXISTS agent_votes JSONB;
+    ALTER TABLE signals ADD COLUMN IF NOT EXISTS market_snapshot JSONB;
+
+    ALTER TABLE paper_trades ADD COLUMN IF NOT EXISTS trade_ref_id INTEGER REFERENCES trades(id);
 
     DO $$ BEGIN
       IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname='supabase_realtime' AND tablename='trades') THEN

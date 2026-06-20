@@ -5,7 +5,7 @@ import { computePerformance, computePositions, getClosedTrades } from "../lib/pa
 
 const router: IRouter = Router();
 
-router.get("/analytics/performance", async (_req, res): Promise<void> => {
+router.get("/analytics/performance", async (req, res): Promise<void> => {
   if (isOfflineMode) {
     const perf = computePerformance();
     const pos = computePositions();
@@ -21,14 +21,21 @@ router.get("/analytics/performance", async (_req, res): Promise<void> => {
       avgLoss: Math.round(perf.avgLoss * 100) / 100,
       profitFactor: Math.round(perf.profitFactor * 100) / 100,
       maxDrawdown: Math.round(perf.maxDrawdownPct * 100) / 100,
-      sharpeRatio: Math.round(perf.sharpeRatio * 1000) / 1000,
+      sharpeRatio: Math.round(perf.sharpe * 1000) / 1000,
       expectancy: Math.round(perf.expectancy * 100) / 100,
     });
     return;
   }
+
+  // Unified: read all closed trades (journal + paper) for comprehensive analytics
+  const tradeTypeFilter = (req.query.tradeType as string) ?? "all";
+
+  let q = supabase.from("trades").select("profit_loss, profit_percent, entry_time, trade_type").eq("status", "closed").order("entry_time");
+  if (tradeTypeFilter !== "all") q = q.eq("trade_type", tradeTypeFilter);
+
   const [{ data: allTrades }, { data: openTrades }] = await Promise.all([
-    supabase.from("trades").select("profit_loss, profit_percent, entry_time").eq("status", "closed").order("entry_time"),
-    supabase.from("trades").select("id").eq("status", "open"),
+    q,
+    supabase.from("trades").select("id, trade_type").eq("status", "open"),
   ]);
 
   const trades = allTrades ?? [];
@@ -105,14 +112,19 @@ router.get("/analytics/daily", async (req, res): Promise<void> => {
     res.json(result);
     return;
   }
+
   const query = GetDailyPerformanceQueryParams.safeParse(req.query);
   const days = query.success ? (query.data.days ?? 30) : 30;
+  const tradeTypeFilter = (req.query.tradeType as string) ?? "all";
   const since = new Date();
   since.setDate(since.getDate() - days);
 
-  const { data: trades } = await supabase
-    .from("trades").select("profit_loss, exit_time, entry_time")
+  let q = supabase
+    .from("trades").select("profit_loss, exit_time, entry_time, trade_type")
     .eq("status", "closed").gte("exit_time", since.toISOString());
+  if (tradeTypeFilter !== "all") q = q.eq("trade_type", tradeTypeFilter);
+
+  const { data: trades } = await q;
 
   const byDay = new Map<string, { pnl: number; trades: number; wins: number; losses: number }>();
   for (const t of trades ?? []) {
@@ -147,7 +159,7 @@ router.get("/analytics/strategy-comparison", async (_req, res): Promise<void> =>
   if (isOfflineMode) { res.json([]); return; }
   const [{ data: strategies }, { data: trades }] = await Promise.all([
     supabase.from("strategies").select("*"),
-    supabase.from("trades").select("strategy_id, profit_loss").eq("status", "closed"),
+    supabase.from("trades").select("strategy_id, profit_loss, trade_type").eq("status", "closed"),
   ]);
 
   res.json((strategies ?? []).map(s => {

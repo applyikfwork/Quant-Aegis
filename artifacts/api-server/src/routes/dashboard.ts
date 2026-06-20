@@ -33,6 +33,7 @@ router.get("/dashboard/summary", async (_req, res): Promise<void> => {
   const startOfDay = new Date();
   startOfDay.setHours(0, 0, 0, 0);
 
+  // Unified: read from ALL trades (both journal and paper) for account-wide metrics
   const [
     { data: allClosed },
     { data: openTrades },
@@ -47,13 +48,15 @@ router.get("/dashboard/summary", async (_req, res): Promise<void> => {
     supabase.from("signals").select("id").gte("created_at", startOfDay.toISOString()),
   ]);
 
+  const BASE_CAPITAL = 10000;
   const allTrades = allClosed ?? [];
   const totalPnlToday = (todayClosed ?? []).reduce((s, t) => s + (t.profit_loss ?? 0), 0);
   const wins = allTrades.filter(t => (t.profit_loss ?? 0) > 0);
   const winRate = allTrades.length > 0 ? (wins.length / allTrades.length) * 100 : 0;
   const bestTrade = allTrades.length > 0 ? Math.max(...allTrades.map(t => t.profit_loss ?? 0)) : null;
   const worstTrade = allTrades.length > 0 ? Math.min(...allTrades.map(t => t.profit_loss ?? 0)) : null;
-  const totalValue = allTrades.reduce((s, t) => s + (t.profit_loss ?? 0), 0) + 10000;
+  const realizedPnl = allTrades.reduce((s, t) => s + (t.profit_loss ?? 0), 0);
+  const totalValue = BASE_CAPITAL + realizedPnl;
 
   res.json({
     openTrades: (openTrades ?? []).length,
@@ -70,9 +73,8 @@ router.get("/dashboard/summary", async (_req, res): Promise<void> => {
   });
 });
 
-router.get("/dashboard/recent-activity", async (_req, res): Promise<void> => {
+router.get("/dashboard/recent-activity", async (req, res): Promise<void> => {
   if (isOfflineMode) {
-    // Generate activity from paper trading state
     const pos = computePositions();
     const closed = getClosedTrades().slice(-10).reverse();
 

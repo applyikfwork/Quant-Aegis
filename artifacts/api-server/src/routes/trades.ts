@@ -25,8 +25,9 @@ router.get("/trades", async (req, res): Promise<void> => {
       entryPrice: p.entryPrice, exitPrice: null, quantity: p.quantity,
       stopLoss: p.stopLoss ?? null, takeProfit: p.takeProfit ?? null,
       profitLoss: p.unrealizedPnl, profitPercent: p.unrealizedPnlPct,
-      status: "open", aiConfidence: p.aiConfidence ?? null, timeframe: "1h",
-      entryTime: p.openTime, exitTime: null, createdAt: p.openTime, strategyName: null,
+      status: "open", aiConfidence: null, timeframe: "1h",
+      entryTime: p.openTime, exitTime: null, createdAt: p.openTime,
+      strategyName: p.strategy ?? null, tradeType: "journal", signalId: null, decisionId: null,
     }));
 
     const closedT = getClosedTrades().map(t => ({
@@ -34,8 +35,9 @@ router.get("/trades", async (req, res): Promise<void> => {
       entryPrice: t.entryPrice, exitPrice: t.exitPrice, quantity: t.quantity,
       stopLoss: null, takeProfit: null,
       profitLoss: t.pnl, profitPercent: t.pnlPct,
-      status: "closed", aiConfidence: t.aiConfidence ?? null, timeframe: "1h",
-      entryTime: t.openTime, exitTime: t.closeTime, createdAt: t.openTime, strategyName: null,
+      status: "closed", aiConfidence: null, timeframe: "1h",
+      entryTime: t.openTime, exitTime: t.closeTime, createdAt: t.openTime,
+      strategyName: t.strategy ?? null, tradeType: "journal", signalId: null, decisionId: null,
     }));
 
     let all = statusFilter === "open" ? openPos
@@ -46,12 +48,15 @@ router.get("/trades", async (req, res): Promise<void> => {
     res.json(all.slice(0, limit));
     return;
   }
+
   const query = ListTradesQueryParams.safeParse(req.query);
   if (!query.success) { res.status(400).json({ error: query.error.message }); return; }
 
+  // Default: return journal trades only (trade_type='journal') for the Trade Journal module
   let q = supabase
     .from("trades")
     .select("*, strategies(name)")
+    .eq("trade_type", "journal")
     .order("created_at", { ascending: false })
     .limit(query.data.limit ?? 50);
 
@@ -59,7 +64,15 @@ router.get("/trades", async (req, res): Promise<void> => {
   if (query.data.symbol) q = q.eq("symbol", query.data.symbol);
 
   const { data, error } = await q;
-  if (error) { res.status(500).json({ error: error.message }); return; }
+  // Gracefully handle missing table (tables not yet created in Supabase)
+  if (error) {
+    if (error.message?.includes("does not exist") || error.message?.includes("schema cache")) {
+      res.json([]);
+      return;
+    }
+    res.status(500).json({ error: error.message });
+    return;
+  }
 
   res.json((data ?? []).map(t => ({
     id: t.id, symbol: t.symbol, strategyId: t.strategy_id, side: t.side,
@@ -68,6 +81,7 @@ router.get("/trades", async (req, res): Promise<void> => {
     profitPercent: t.profit_percent, status: t.status, aiConfidence: t.ai_confidence,
     timeframe: t.timeframe, entryTime: t.entry_time, exitTime: t.exit_time,
     createdAt: t.created_at, strategyName: (t.strategies as any)?.name ?? null,
+    tradeType: t.trade_type ?? "journal", signalId: t.signal_id ?? null, decisionId: t.decision_id ?? null,
   })));
 });
 
@@ -81,6 +95,9 @@ router.post("/trades", async (req, res): Promise<void> => {
     quantity: parsed.data.quantity, stop_loss: parsed.data.stopLoss ?? null,
     take_profit: parsed.data.takeProfit ?? null, ai_confidence: parsed.data.aiConfidence ?? null,
     timeframe: parsed.data.timeframe ?? null,
+    trade_type: "journal",
+    signal_id: (parsed.data as any).signalId ?? null,
+    decision_id: (parsed.data as any).decisionId ?? null,
   }).select().single();
 
   if (error) { res.status(500).json({ error: error.message }); return; }
@@ -90,6 +107,11 @@ router.post("/trades", async (req, res): Promise<void> => {
     await supabase.from("trade_reasons").insert(
       reasons.map(r => ({ trade_id: trade.id, reason_type: r.reasonType, reason_text: r.reasonText }))
     );
+  }
+
+  // If linked to a signal, mark signal as active
+  if (trade.signal_id) {
+    await supabase.from("signals").update({ status: "active" }).eq("id", trade.signal_id);
   }
 
   await supabase.from("activity_events").insert({
@@ -112,6 +134,7 @@ router.post("/trades", async (req, res): Promise<void> => {
     profitPercent: trade.profit_percent, status: trade.status, aiConfidence: trade.ai_confidence,
     timeframe: trade.timeframe, entryTime: trade.entry_time, exitTime: null,
     createdAt: trade.created_at, strategyName,
+    tradeType: "journal", signalId: trade.signal_id, decisionId: trade.decision_id,
   });
 });
 
@@ -130,6 +153,7 @@ router.get("/trades/:id", async (req, res): Promise<void> => {
     profitPercent: trade.profit_percent, status: trade.status, aiConfidence: trade.ai_confidence,
     timeframe: trade.timeframe, entryTime: trade.entry_time, exitTime: trade.exit_time,
     createdAt: trade.created_at, strategyName: (trade.strategies as any)?.name ?? null,
+    tradeType: trade.trade_type ?? "journal", signalId: trade.signal_id ?? null, decisionId: trade.decision_id ?? null,
   });
 });
 
@@ -149,9 +173,10 @@ router.patch("/trades/:id", async (req, res): Promise<void> => {
   if (parsed.data.status !== undefined) updates.status = parsed.data.status;
   if (parsed.data.exitTime !== undefined) updates.exit_time = parsed.data.exitTime;
 
+  let pnl: number | undefined;
   if (parsed.data.exitPrice !== undefined && parsed.data.status === "closed") {
     const exitPrice = parsed.data.exitPrice;
-    const pnl = current.side === "long"
+    pnl = current.side === "long"
       ? (exitPrice - current.entry_price) * current.quantity
       : (current.entry_price - exitPrice) * current.quantity;
     const pnlPct = current.side === "long"
@@ -167,6 +192,46 @@ router.patch("/trades/:id", async (req, res): Promise<void> => {
       description: `${current.side.toUpperCase()} on ${current.symbol} closed at $${exitPrice} | PnL: ${pnl >= 0 ? "+" : ""}$${pnl.toFixed(2)}`,
       symbol: current.symbol, value: pnl,
     });
+
+    // Auto-create AI feedback if trade was linked to a signal/decision
+    if (current.signal_id || current.decision_id) {
+      const isWin = pnl > 0;
+      await supabase.from("ai_feedback").insert({
+        decision_id: current.decision_id ?? null,
+        trade_id: current.id,
+        prediction: current.side === "long" ? "BUY" : "SELL",
+        actual_result: isWin ? "profit" : "loss",
+        correct: isWin,
+        lesson: isWin
+          ? `Trade closed profitably at ${pnl.toFixed(2)} USD. Signal was correct.`
+          : `Trade closed at a loss of ${Math.abs(pnl).toFixed(2)} USD. Review entry conditions.`,
+      });
+    }
+
+    // If linked to signal, mark it completed
+    if (current.signal_id) {
+      await supabase.from("signals").update({ status: "completed" }).eq("id", current.signal_id);
+    }
+
+    // Update strategy win stats if strategy linked
+    if (current.strategy_id) {
+      const { data: stratTrades } = await supabase
+        .from("trades")
+        .select("profit_loss")
+        .eq("strategy_id", current.strategy_id)
+        .eq("status", "closed");
+      const allStratTrades = [...(stratTrades ?? []), { profit_loss: pnl }];
+      const wins = allStratTrades.filter(t => (t.profit_loss ?? 0) > 0);
+      const winRate = allStratTrades.length > 0 ? (wins.length / allStratTrades.length) * 100 : 0;
+      const grossProfit = wins.reduce((s, t) => s + (t.profit_loss ?? 0), 0);
+      const grossLoss = Math.abs(allStratTrades.filter(t => (t.profit_loss ?? 0) <= 0).reduce((s, t) => s + (t.profit_loss ?? 0), 0));
+      const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : 0;
+      await supabase.from("strategies").update({
+        win_rate: Math.round(winRate * 10) / 10,
+        total_trades: allStratTrades.length,
+        profit_factor: Math.round(profitFactor * 100) / 100,
+      }).eq("id", current.strategy_id);
+    }
   }
 
   const { data: trade, error } = await supabase.from("trades").update(updates).eq("id", params.data.id).select().single();
@@ -179,6 +244,7 @@ router.patch("/trades/:id", async (req, res): Promise<void> => {
     profitPercent: trade.profit_percent, status: trade.status, aiConfidence: trade.ai_confidence,
     timeframe: trade.timeframe, entryTime: trade.entry_time, exitTime: trade.exit_time,
     createdAt: trade.created_at, strategyName: null,
+    tradeType: trade.trade_type ?? "journal", signalId: trade.signal_id ?? null, decisionId: trade.decision_id ?? null,
   });
 });
 

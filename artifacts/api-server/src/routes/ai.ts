@@ -607,6 +607,41 @@ router.post("/ai/analyze", async (req, res): Promise<void> => {
     agent_votes: fullAgentVotes,
   }).select().single();
 
+  // ── AUTO-CREATE SIGNAL (AI → Signals closed loop) ─────────────────────────
+  let autoSignal: { id: number } | null = null;
+  if (saved && (decision === "BUY" || decision === "SELL")) {
+    const signalType = decision === "BUY" ? "buy" : "sell";
+    const { data: newSignal } = await supabase.from("signals").insert({
+      symbol, signal_type: signalType, confidence,
+      reason: reasoning.summary,
+      decision_id: saved.id,
+      entry_price: tradeProposal.entry,
+      stop_loss: tradeProposal.stopLoss,
+      tp1: tradeProposal.tp1,
+      tp2: tradeProposal.tp2,
+      tp3: tradeProposal.tp3,
+      timeframe,
+      risk_reward: tradeProposal.riskReward,
+      agent_votes: fullAgentVotes,
+      market_snapshot: { rsi, ema20, ema50, ema200, adx, atr, relativeVolume },
+      status: "pending",
+    }).select().single();
+
+    if (newSignal) {
+      autoSignal = newSignal;
+      // Link decision back to the new signal
+      await supabase.from("ai_decisions").update({ signal_id: newSignal.id }).eq("id", saved.id);
+    }
+
+    // Record signal generation activity
+    await supabase.from("activity_events").insert({
+      type: "signal_generated",
+      title: `AI Signal: ${decision} ${symbol}`,
+      description: `${decision} signal for ${symbol} ${timeframe} with ${confidence}% confidence`,
+      symbol, value: confidence,
+    });
+  }
+
   await supabase.from("ai_memory").insert({
     symbol, timeframe,
     market_condition: { trend: emaBullish ? "bullish" : "bearish", adx, ema_aligned: ema20 > ema50 },
@@ -615,6 +650,7 @@ router.post("/ai/analyze", async (req, res): Promise<void> => {
 
   res.json({
     ...saved,
+    signalId: autoSignal?.id ?? null,
     // Full structured response
     meta: { symbol, timeframe, riskProfile, strategy, analysisTimeMs: analysisTime },
     decision,
@@ -707,35 +743,118 @@ router.put("/experiments/:id", async (req, res): Promise<void> => {
 });
 
 // ─── PAPER TRADES ─────────────────────────────────────────────────────────────
+// These routes use the unified `trades` table with trade_type='paper'
+// for full interconnection with Dashboard, Portfolio, Analytics, and AI Feedback.
+
 router.get("/paper-trades", async (_req, res): Promise<void> => {
-  const { data } = await supabase.from("paper_trades").select("*").order("entry_time", { ascending: false });
-  res.json(data ?? []);
+  const { data } = await supabase
+    .from("trades")
+    .select("*, strategies(name)")
+    .eq("trade_type", "paper")
+    .order("entry_time", { ascending: false });
+  res.json((data ?? []).map(t => ({
+    id: t.id, symbol: t.symbol, side: t.side,
+    strategy_id: t.strategy_id, strategy_name: (t.strategies as any)?.name ?? null,
+    signal_id: t.signal_id, decision_id: t.decision_id,
+    entry_price: t.entry_price, exit_price: t.exit_price,
+    quantity: t.quantity, stop_loss: t.stop_loss, take_profit: t.take_profit,
+    profit_loss: t.profit_loss, profit_percent: t.profit_percent,
+    status: t.status, entry_time: t.entry_time, exit_time: t.exit_time,
+  })));
 });
 
 router.post("/paper-trades", async (req, res): Promise<void> => {
-  const { symbol, side, strategyId, entryPrice, quantity, stopLoss, takeProfit, status } = req.body;
-  const { data } = await supabase.from("paper_trades").insert({
-    symbol, side, strategy_id: strategyId, entry_price: entryPrice,
-    quantity, stop_loss: stopLoss, take_profit: takeProfit, status: status ?? "open"
+  const { symbol, side, strategyId, entryPrice, quantity, stopLoss, takeProfit, status, signalId, decisionId, leverage } = req.body;
+
+  // Write to unified trades table with trade_type='paper'
+  const { data: trade, error } = await supabase.from("trades").insert({
+    symbol, side, strategy_id: strategyId ?? null,
+    entry_price: entryPrice, quantity,
+    stop_loss: stopLoss ?? null, take_profit: takeProfit ?? null,
+    status: status ?? "open",
+    trade_type: "paper",
+    signal_id: signalId ?? null,
+    decision_id: decisionId ?? null,
+    leverage: leverage ?? 1,
   }).select().single();
-  res.json(data);
+
+  if (error) { res.status(500).json({ error: error.message }); return; }
+
+  // If linked to a signal, mark as active
+  if (trade.signal_id) {
+    await supabase.from("signals").update({ status: "active" }).eq("id", trade.signal_id);
+  }
+
+  // Record activity event for dashboard feed
+  await supabase.from("activity_events").insert({
+    type: "paper_trade_opened",
+    title: `Paper Trade: ${side.toUpperCase()} ${symbol}`,
+    description: `Paper ${side.toUpperCase()} ${quantity} ${symbol} at $${entryPrice}`,
+    symbol, value: entryPrice,
+  });
+
+  res.json({
+    id: trade.id, symbol: trade.symbol, side: trade.side,
+    strategy_id: trade.strategy_id, signal_id: trade.signal_id, decision_id: trade.decision_id,
+    entry_price: trade.entry_price, exit_price: trade.exit_price,
+    quantity: trade.quantity, stop_loss: trade.stop_loss, take_profit: trade.take_profit,
+    profit_loss: trade.profit_loss, profit_percent: trade.profit_percent,
+    status: trade.status, entry_time: trade.entry_time, exit_time: trade.exit_time,
+  });
 });
 
 router.put("/paper-trades/:id", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id);
   const { exitPrice, status } = req.body;
-  const { data: existing } = await supabase.from("paper_trades").select("*").eq("id", id).single();
+
+  const { data: existing } = await supabase.from("trades").select("*").eq("id", id).eq("trade_type", "paper").single();
   if (!existing) { res.status(404).json({ error: "Not found" }); return; }
+
   const updates: Record<string, unknown> = { status };
+  let pnl: number | undefined;
+
   if (exitPrice) {
     const ep = parseFloat(String(exitPrice));
     const diff = existing.side === "long" ? ep - existing.entry_price : existing.entry_price - ep;
+    pnl = Math.round(diff * existing.quantity * 100) / 100;
     updates.exit_price = ep;
-    updates.profit_loss = Math.round(diff * existing.quantity * 100) / 100;
+    updates.profit_loss = pnl;
     updates.profit_percent = Math.round((diff / existing.entry_price) * 10000) / 100;
     if (status === "closed") updates.exit_time = new Date().toISOString();
   }
-  const { data } = await supabase.from("paper_trades").update(updates).eq("id", id).select().single();
+
+  const { data } = await supabase.from("trades").update(updates).eq("id", id).select().single();
+
+  // Auto-create AI feedback when paper trade closes (closes the AI learning loop)
+  if (status === "closed" && pnl !== undefined && (existing.signal_id || existing.decision_id)) {
+    const isWin = pnl > 0;
+    await supabase.from("ai_feedback").insert({
+      decision_id: existing.decision_id ?? null,
+      trade_id: existing.id,
+      prediction: existing.side === "long" ? "BUY" : "SELL",
+      actual_result: isWin ? "profit" : "loss",
+      correct: isWin,
+      lesson: isWin
+        ? `Paper trade profitable: +$${pnl.toFixed(2)}. Signal confirmed.`
+        : `Paper trade loss: -$${Math.abs(pnl).toFixed(2)}. Review setup criteria.`,
+    });
+
+    // Mark signal as completed
+    if (existing.signal_id) {
+      await supabase.from("signals").update({ status: "completed" }).eq("id", existing.signal_id);
+    }
+  }
+
+  // Record activity
+  if (status === "closed" && pnl !== undefined) {
+    await supabase.from("activity_events").insert({
+      type: "paper_trade_closed",
+      title: `Paper Trade Closed: ${existing.symbol}`,
+      description: `Paper ${existing.side.toUpperCase()} ${existing.symbol} closed | PnL: ${pnl >= 0 ? "+" : ""}$${pnl.toFixed(2)}`,
+      symbol: existing.symbol, value: pnl,
+    });
+  }
+
   res.json(data);
 });
 
